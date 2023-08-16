@@ -197,17 +197,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else:
         await interaction.followup.send("API failed")
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}, N={usernegative}, M={currentmodel}") #Print request to console
-
-@client.tree.command() #slash command to reset all user ooba history.
-async def mindwipe(interaction: discord.Interaction):
-    if hasattr(client, 'interaction_history'):
-        client.interaction_history.clear()
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | mindwipe | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel}")
-        await interaction.response.send_message("Mind wiped")
-    else:
-        print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | mindwipe | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel}")
-        await interaction.response.send_message("No mind to wipe")
+    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}, N={self.payload["negative_prompt"]}, M={currentmodel}") #Print request to console
 
 with open("token.cfg", "r") as token_file: #load bot token from config file.
     token = token_file.read().strip()
