@@ -5,7 +5,7 @@ I wanted a bot to provide LLM and Image gen stuff, but all of the ones out there
 To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 7 question/answer pairs for each user, which is lost on each restart. 
 Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the imagesettings.cfg file. Any negatives in it are applied to all gens. Useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, and a delete button which can only be used by the person who made the gen.
 
-#INSTALLATION INSTRUCTIONS
+*INSTALLATION INSTRUCTIONS*
 
 -Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
