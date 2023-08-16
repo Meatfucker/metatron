@@ -21,7 +21,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 -Activate your new environment `conda activate metatron`
 
--Download the repo `https://github.com/Meatfucker/metatron.git`
+-Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
 -Install the bots requirements `pip install -r requirements.txt`
 
