@@ -1,0 +1,10 @@
+py-cord
+python-dotenv
+requests
+Pillow
+tomlkit
+urlextract
+discord-py-interactions
+discord-typings
+emoji
+sniffio
