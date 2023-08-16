@@ -8,21 +8,34 @@ Image generation is handled via the /imagegen command. It provides very basic im
 *INSTALLATION INSTRUCTIONS*
 
 -Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
+
 -Go to the Bot tab on the Developer portal site and enable Privileged Gateway Intents. You need Presence, Server Members, and Message Content enabled.
+
 -Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
 
 -Install miniconda if you dont already have conda.
+
 -Activate your base conda enviroment
+
 -Create a new enviroment `conda create -n metatron python`
+
 -Activate your new environment `conda activate metatron`
+
 -Download the repo `https://github.com/Meatfucker/metatron.git`
+
 -Install the bots requirements `pip install -r requirements.txt`
 
+
 -Read and edit api.cfg, This contains the addresses for your APIs
+
 -Read and edit models.cfg, This is a list of models you want to show up in the UI, as well as mandatory positive and negative prompts for each one.
+
 -Read and edit servers.cfg, This is a list of the discord server ids of each server your bot will be on, required for /commands to work, LLM might work without it.
+
 -Read and edit token.cfg, This contains your bots discord auth token. You get this from the discord developer portal bot manager site.
 
+
 -Run the bot, if all goes well itll say it has logged in. `python metatron.py`
+
 
 The files imagesettings.cfg and wordsettings.cfg are json containing the default settings for the A1111 and Oobabooga API's respectively. Careful about their structure, if you bork them up things will fail. You can add any key to them you like as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
