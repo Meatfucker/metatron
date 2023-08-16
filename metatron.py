@@ -63,6 +63,7 @@ class MyClient(discord.Client):
             if "request" not in locals(): #sets up a default payload if one doesnt already exist
                 request = self.defaultword_payload.copy()
             taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
+            taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
             request["user_input"] = taggedmessage #load the user prompt into the api payload
             user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
             request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
@@ -71,7 +72,7 @@ class MyClient(discord.Client):
                 async with session.post(f'{WORDAPI}/api/v1/chat', json=request) as response:
                     if response.status == 200:
                         result = await response.json()
-                        #print(json.dumps(result, indent=1)) #uncomment for debugging console data
+                        print(json.dumps(result, indent=1)) #uncomment for debugging console data
                         last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
                         processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
                         new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
@@ -197,7 +198,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else:
         await interaction.followup.send("API failed")
-    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}, N={self.payload["negative_prompt"]}, M={currentmodel}") #Print request to console
+    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}, N={self.payload["negative_prompt"]}, M={currentmodel}') #Print request to console
 
 with open("token.cfg", "r") as token_file: #load bot token from config file.
     token = token_file.read().strip()
