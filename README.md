@@ -1,5 +1,5 @@
 # metatron
-A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, and an stable diffusion generation bot via the AUTOMATIC1111 API.
+A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, and a stable diffusion generation bot via the AUTOMATIC1111 API.
 
 I wanted a bot to provide LLM and Image gen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
 To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 7 question/answer pairs for each user, which is lost on each restart. 
