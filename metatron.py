@@ -72,7 +72,7 @@ class MyClient(discord.Client):
                 async with session.post(f'{WORDAPI}/api/v1/chat', json=request) as response:
                     if response.status == 200:
                         result = await response.json()
-                        print(json.dumps(result, indent=1)) #uncomment for debugging console data
+                        # print(json.dumps(result, indent=1)) #uncomment for debugging console data
                         last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
                         processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
                         new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
