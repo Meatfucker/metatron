@@ -28,14 +28,9 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 -Install the bots requirements `pip install -r requirements.txt`
 
+-Read and edit settings-example.cfg, Make your required changes and save as settings.cfg
 
--Read and edit api.cfg, This contains the addresses for your APIs
 
--Read and edit models.cfg, This is a list of models you want to show up in the UI, as well as mandatory positive and negative prompts for each one.
-
--Read and edit servers.cfg, This is a list of the discord server ids of each server your bot will be on, required for /commands to work, LLM might work without it.
-
--Read and edit token.cfg, This contains your bots discord auth token. You get this from the discord developer portal bot manager site.
 
 
 -Run the bot, if all goes well itll say it has logged in. `python metatron.py`
