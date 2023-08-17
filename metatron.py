@@ -15,30 +15,32 @@ from datetime import datetime
 import requests
 
 MY_GUILD = []
-WORDAPI = ""
-IMAGEAPI = ""
+SETTINGS = {}
 
-with open("servers.cfg", "r") as guild_file: #Load Discord Server list
-    for line in guild_file:
-        guild_id = line.strip()  # Remove newline characters
+with open("settings.cfg", "r") as settings_file:
+    for line in settings_file:
+        if "=" in line:
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            if key in SETTINGS:             # Check if the key already exists in SETTINGS
+                if isinstance(SETTINGS[key], list):
+                    SETTINGS[key].append(value)
+                else:
+                    SETTINGS[key] = [SETTINGS[key], value]
+            else:
+                SETTINGS[key] = [value]  # Always store values as a list
+    #print(SETTINGS["imagesettings"][0])     #Uncomment for settings debugging.    
+    
+    for guild_id in SETTINGS["servers"]:
         MY_GUILD.append(discord.Object(id=guild_id))
-with open("api.cfg", "r") as config_file: #Load oobabooga api address.
-            for line in config_file:
-                if line.startswith("wordapi="):
-                   WORDAPI = line.strip().replace("wordapi=", "")
-with open("api.cfg", "r") as config_file: #Load a1111 api address
-            for line in config_file:
-                if line.startswith("imageapi="):
-                   IMAGEAPI = line.strip().replace("imageapi=", "")                   
         
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
-        with open("imagesettings.cfg", "r") as imagecfg_file: #load imagegen defaults into payload
-            self.defaultimage_payload = json.load(imagecfg_file)
-        with open("wordsettings.cfg", "r") as wordcfg_file: #load wordgen defaults into payload
-            self.defaultword_payload = json.load(wordcfg_file)
+        self.defaultimage_payload = json.loads(SETTINGS["imagesettings"][0])
+        self.defaultword_payload = json.loads(SETTINGS["wordsettings"][0])
         self.user_interaction_history = {} #Set up user LLM history variable.
     
     async def setup_hook(self): #Sync slash commands with discord servers Im on.
@@ -48,10 +50,9 @@ class MyClient(discord.Client):
     
     def load_models(self): #Get list of models for user interface
         models = []
-        with open("models.cfg", "r") as models_file:
-            for line in models_file:
-                model = line.strip().split("|")[0]
-                models.append(app_commands.Choice(name=model, value=model))
+        for line in SETTINGS["models"]:
+            model = line.strip().split("|")[0]
+            models.append(app_commands.Choice(name=model, value=model))
         return models
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
@@ -61,7 +62,7 @@ class MyClient(discord.Client):
             self.user_interaction_history[message.author.id] = []
         if self.user.mentioned_in(message):
             if "request" not in locals(): #sets up a default payload if one doesnt already exist
-                request = self.defaultword_payload.copy()
+                request = self.defaultword_payload
             taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
             taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
             request["user_input"] = taggedmessage #load the user prompt into the api payload
@@ -69,10 +70,10 @@ class MyClient(discord.Client):
             request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
             request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
             async with aiohttp.ClientSession() as session: #make the api request
-                async with session.post(f'{WORDAPI}/api/v1/chat', json=request) as response:
+                async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                     if response.status == 200:
                         result = await response.json()
-                        # print(json.dumps(result, indent=1)) #uncomment for debugging console data
+                        #print(json.dumps(result, indent=1)) #uncomment for debugging console data
                         last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
                         processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
                         new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
@@ -84,7 +85,7 @@ class MyClient(discord.Client):
                 
     async def generate_image(self, payload): #image generation api call
             async with aiohttp.ClientSession() as session:
-                async with session.post(f'{IMAGEAPI}/sdapi/v1/txt2img', json=payload) as response:
+                async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/txt2img', json=payload) as response:
                     if response.status == 200:
                         data = await response.json()
                         if "images" in data: #Tile and compile images into grid.
@@ -125,7 +126,7 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
         async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
-            async with session.get(f'{IMAGEAPI}/sdapi/v1/options') as response: #Api request to get the current model.
+            async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options') as response: #Api request to get the current model.
                 response_data = await response.json()
                 currentmodel = response_data.get("sd_model_checkpoint", "")  # Extract current model checkpoint value
         composite_image_bytes = await client.generate_image(self.payload) #generate image and place it into composite_image_bytes
@@ -176,18 +177,17 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         matches = re.findall(pattern, str(usermodel)) #convert the data to string and then run the regex on it
         model_payload = {"sd_model_checkpoint": matches[0]} #put model choice into payload
         async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
-            async with session.post(f'{IMAGEAPI}/sdapi/v1/options', json=model_payload) as response:
+            async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
                 response_data = await response.json()
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
-        async with session.get(f'{IMAGEAPI}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
+        async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
             currentmodel = response_data.get("sd_model_checkpoint", "")  # Extract current model checkpoint value
-            with open("models.cfg", "r") as models_file: #Load the model config and then extract the second and third | separated values        
-                    for line in models_file:
-                        model, modeltemp, modelnegtemp = line.strip().split("|", 2)  #grab the second and third values and put them into variables
-                        if model == currentmodel: #find the matching model and load the model default positive and negative prompts
-                            modelprompt = modeltemp
-                            modelnegative = modelnegtemp
+            for line in SETTINGS["models"]:
+                model, modeltemp, modelnegtemp = line.strip().split("|", 2)  #grab the second and third values and put them into variables
+                if model == currentmodel: #find the matching model and load the model default positive and negative prompts
+                    modelprompt = modeltemp
+                    modelnegative = modelnegtemp
             if modelprompt: #Combine the model defaults with the user choices and update payload
                 payload["prompt"] = f"{modelprompt},{payload['prompt']}"
             if modelnegative:
@@ -198,8 +198,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else:
         await interaction.followup.send("API failed")
-    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}, N={self.payload["negative_prompt"]}, M={currentmodel}') #Print request to console
+    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={payload["negative_prompt"]}, M={currentmodel}') #Print request to console
 
-with open("token.cfg", "r") as token_file: #load bot token from config file.
-    token = token_file.read().strip()
-client.run(token) #run bot.
+client.run(SETTINGS["token"][0]) #run bot.
