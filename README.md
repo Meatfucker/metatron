@@ -36,4 +36,4 @@ Image generation is handled via the /imagegen command. It provides very basic im
 -Run the bot, if all goes well itll say it has logged in. `python metatron.py`
 
 
-The files imagesettings.cfg and wordsettings.cfg are json containing the default settings for the A1111 and Oobabooga API's respectively. Careful about their structure, if you bork them up things will fail. You can add any key to them you like as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
+You can add any key to them you like to the settings,cfg imagesettings and wordsettings options as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
