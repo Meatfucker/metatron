@@ -30,7 +30,11 @@ with open("settings.cfg", "r") as settings_file:
                     SETTINGS[key] = [SETTINGS[key], value]
             else:
                 SETTINGS[key] = [value]  # Always store values as a list
-    #print(SETTINGS["imagesettings"][0])     #Uncomment for settings debugging.    
+    if SETTINGS["debug"][0] == "True":
+        print("DEBUG IMAGE SETTINGS BEGIN")
+        print(SETTINGS["imagesettings"][0])
+        print("DEBUG WORD SETTINGS BEGIN")
+        print(SETTINGS["wordsettings"][0])
     
     for guild_id in SETTINGS["servers"]:
         MY_GUILD.append(discord.Object(id=guild_id))
@@ -69,11 +73,16 @@ class MyClient(discord.Client):
             user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
             request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
             request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
+            if SETTINGS["debug"][0] == "True":
+                            print("DEBUG WORD PAYLOAD BEGIN")
+                            print(request)
             async with aiohttp.ClientSession() as session: #make the api request
                 async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                     if response.status == 200:
                         result = await response.json()
-                        #print(json.dumps(result, indent=1)) #uncomment for debugging console data
+                        if SETTINGS["debug"][0] == "True":
+                            print("DEBUG WORD PAYLOAD RESPONSE BEGIN")
+                            print(json.dumps(result, indent=1)) #uncomment for debugging console data
                         last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
                         processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
                         new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
@@ -84,6 +93,9 @@ class MyClient(discord.Client):
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') #print to console for logging
                 
     async def generate_image(self, payload): #image generation api call
+            if SETTINGS["debug"][0] == "True":
+                            print("DEBUG IMAGE PAYLOAD BEGIN")
+                            print(payload)
             async with aiohttp.ClientSession() as session:
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/txt2img', json=payload) as response:
                     if response.status == 200:
