@@ -1,6 +1,9 @@
 from typing import Optional
 import discord
 from discord import app_commands
+from discord import ui
+from discord.ext import commands
+from discord.ext.commands import Context
 import aiohttp
 import json
 import asyncio
@@ -9,8 +12,6 @@ import base64
 from PIL import Image
 import math
 import re
-from discord.ext import commands
-from discord.ext.commands import Context
 from datetime import datetime
 import requests
 
@@ -120,6 +121,10 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
             self.payload = payload
             self.userid = user_id
     
+    @discord.ui.button(label='Edit', emoji="✏️", style=discord.ButtonStyle.grey)
+    async def edit(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(Editpromptmodal(self.payload))
+        
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
@@ -146,6 +151,24 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
             await interaction.message.delete()
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Delete   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.id}')
 
+class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'):
+    def __init__(self, payload, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.payload = payload
+            self.timeout = None
+            self.add_item(discord.ui.TextInput(label="Prompt", default=self.payload["prompt"], required=True))
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        newprompt = str(self.children[0])
+        negative_values = [neg.strip() for neg in self.payload["negative_prompt"].split(",")] # Split negative values into a list
+        for neg in negative_values: # Remove negative values from userprompt if they match
+            newprompt = newprompt.replace(neg, '')
+        self.payload["prompt"] = newprompt
+        print(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
+        composite_image_bytes = await client.generate_image(self.payload)
+        await interaction.followup.send(content=f'Edit: New prompt `{newprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
+        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
+     
 @client.event
 async def on_ready():
     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
