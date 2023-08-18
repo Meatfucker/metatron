@@ -123,13 +123,9 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
-        async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
-            async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options') as response: #Api request to get the current model.
-                response_data = await response.json()
-                currentmodel = response_data.get("sd_model_checkpoint", "")  # Extract current model checkpoint value
         composite_image_bytes = await client.generate_image(self.payload) #generate image and place it into composite_image_bytes
         await interaction.followup.send(content=f"Reroll", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]} | M={currentmodel}')
+        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
     
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
