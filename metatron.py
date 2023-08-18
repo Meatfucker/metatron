@@ -179,7 +179,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         if "usersteps" not in ignore_fields: payload["steps"] = usersteps
         else: usersteps = None
     if usermodel is not None: #Check the user models choice if present
-        if "usermodel" not in ignore_fields:   
+        if "usermodel" not in ignore_fields:  
             pattern = r"value='(.*?)'" #regex to strip unneed chars
             matches = re.findall(pattern, str(usermodel)) #convert the data to string and then run the regex on it
             model_payload = {"sd_model_checkpoint": matches[0]} #put model choice into payload
@@ -187,7 +187,16 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
                     response_data = await response.json()
         else: usermodel = None
-    
+    else:
+        for default_model in SETTINGS["defaultmodel"]:
+            default_model_values = default_model.split(",")
+            print(default_model_values[0])
+            if str(interaction.guild.id) == default_model_values[0]:
+                model_payload = {"sd_model_checkpoint": default_model_values[1]}
+                async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
+                    async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
+                        response_data = await response.json()
+       
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
