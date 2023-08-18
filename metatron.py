@@ -24,17 +24,11 @@ with open("settings.cfg", "r") as settings_file:
             key = key.strip()
             value = value.strip()
             if key in SETTINGS:             # Check if the key already exists in SETTINGS
-                if isinstance(SETTINGS[key], list):
-                    SETTINGS[key].append(value)
-                else:
-                    SETTINGS[key] = [SETTINGS[key], value]
-            else:
-                SETTINGS[key] = [value]  # Always store values as a list
-    if SETTINGS["debug"][0] == "True":
-        print("DEBUG IMAGE SETTINGS BEGIN")
-        print(SETTINGS["imagesettings"][0])
-        print("DEBUG WORD SETTINGS BEGIN")
-        print(SETTINGS["wordsettings"][0])
+                if isinstance(SETTINGS[key], list): SETTINGS[key].append(value)
+                else: SETTINGS[key] = [SETTINGS[key], value]
+            else: SETTINGS[key] = [value]  # Always store values as a list
+    print(f'DEBUG IMAGE SETTINGS BEGIN: {SETTINGS["imagesettings"][0]}') if SETTINGS["debug"][0] == "True" else None
+    print(f'DEBUG WORD SETTINGS BEGIN: {SETTINGS["wordsettings"][0]}') if SETTINGS["debug"][0] == "True" else None
     
     for guild_id in SETTINGS["servers"]:
         MY_GUILD.append(discord.Object(id=guild_id))
@@ -60,10 +54,8 @@ class MyClient(discord.Client):
         return models
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
-        if message.author == self.user: #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
-            return
-        if not self.user_interaction_history.get(message.author.id): #Creates a blank interaction history if it doesnt already exist.
-            self.user_interaction_history[message.author.id] = []
+        if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
+        if not self.user_interaction_history.get(message.author.id): self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
         if self.user.mentioned_in(message):
             if "request" not in locals(): #sets up a default payload if one doesnt already exist
                 request = self.defaultword_payload
@@ -73,16 +65,12 @@ class MyClient(discord.Client):
             user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
             request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
             request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
-            if SETTINGS["debug"][0] == "True":
-                            print("DEBUG WORD PAYLOAD BEGIN")
-                            print(request)
+            print(f'DEBUG WORD PAYLOAD BEGIN: {request}') if SETTINGS["debug"][0] == "True" else None
             async with aiohttp.ClientSession() as session: #make the api request
                 async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                     if response.status == 200:
                         result = await response.json()
-                        if SETTINGS["debug"][0] == "True":
-                            print("DEBUG WORD PAYLOAD RESPONSE BEGIN")
-                            print(json.dumps(result, indent=1)) #uncomment for debugging console data
+                        print(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                         last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
                         processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
                         new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
@@ -93,9 +81,7 @@ class MyClient(discord.Client):
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') #print to console for logging
                 
     async def generate_image(self, payload): #image generation api call
-            if SETTINGS["debug"][0] == "True":
-                            print("DEBUG IMAGE PAYLOAD BEGIN")
-                            print(payload)
+            print(f'DEBUG IMAGE PAYLOAD BEGIN: {payload}') if SETTINGS["debug"][0] == "True" else None
             async with aiohttp.ClientSession() as session:
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/txt2img', json=payload) as response:
                     if response.status == 200:
@@ -122,8 +108,7 @@ class MyClient(discord.Client):
                             png_payload = {"image": "data:image/png;base64," + composite_image_base64} #prepare image for posting to discord
                             composite_image_bytes.seek(0) #go to the beginning of your bytes
                             return composite_image_bytes
-                    else:
-                        return None
+                    else: return None
     
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
@@ -155,8 +140,7 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
                     dm_channel = await interaction.user.create_dm()
                     await dm_channel.send(file=discord.File(io.BytesIO(image_bytes), filename='composite_image.png'))
                     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | DM Image | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.message.attachments[0].url}') 
-                else:
-                    await interaction.response.send_message("Failed to fetch the image.")
+                else: await interaction.response.send_message("Failed to fetch the image.")
     
     @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
     async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -170,27 +154,39 @@ async def on_ready():
     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
 
 @client.tree.command() #Begins imagen slash command stuff 
-@app_commands.describe(usermodel="Choose the model")
-@app_commands.describe(userprompt="Describe what you want to gen")
-@app_commands.describe(usernegative="Enter things you dont want in the gen")
+@app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps")
 @app_commands.choices(usermodel=client.load_models())  # Use the loaded models as choices
 
-async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None):
-    await interaction.response.send_message("Nightmare incoming...", ephemeral=True, delete_after=10) #respond so discord doesnt get mad it takes a long time to actually respond to the message
+async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None, userbatch: Optional[int] = None, userseed: Optional[int] = None, usersteps: Optional[int] = None):
+    await interaction.response.defer() #respond so discord doesnt get mad it takes a long time to actually respond to the message
     payload = client.defaultimage_payload.copy() #set up default payload 
     negative_values = [neg.strip() for neg in payload["negative_prompt"].split(",")] # Split negative values into a list
+    ignore_fields = [field.strip() for field in SETTINGS["ignorefields"][0].split(",")]  # Split ignored fields into a list
     for neg in negative_values: # Remove negative values from userprompt if they match
         userprompt = userprompt.replace(neg, '')
     payload["prompt"] = userprompt.strip() #put the prompt into the payload
     if usernegative is not None:
-        payload["negative_prompt"] += usernegative #Add the user negative to the existing negative payload
+        if "usernegative" not in ignore_fields: payload["negative_prompt"] += usernegative 
+        else: usernegative = None
+    if userbatch is not None:
+        if "userbatch" not in ignore_fields: payload["batch_size"] = userbatch
+        else: userbatch = None
+    if userseed is not None:
+        if "userseed" not in ignore_fields: payload["seed"] = userseed
+        else: userseed = None
+    if usersteps is not None:
+        if "usersteps" not in ignore_fields: payload["steps"] = usersteps
+        else: usersteps = None
     if usermodel is not None: #Check the user models choice if present
-        pattern = r"value='(.*?)'" #regex to strip unneed chars
-        matches = re.findall(pattern, str(usermodel)) #convert the data to string and then run the regex on it
-        model_payload = {"sd_model_checkpoint": matches[0]} #put model choice into payload
-        async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
-            async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
-                response_data = await response.json()
+        if "usermodel" not in ignore_fields:   
+            pattern = r"value='(.*?)'" #regex to strip unneed chars
+            matches = re.findall(pattern, str(usermodel)) #convert the data to string and then run the regex on it
+            model_payload = {"sd_model_checkpoint": matches[0]} #put model choice into payload
+            async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
+                async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
+                    response_data = await response.json()
+        else: usermodel = None
+    
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
@@ -200,16 +196,14 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 if model == currentmodel: #find the matching model and load the model default positive and negative prompts
                     modelprompt = modeltemp
                     modelnegative = modelnegtemp
-            if modelprompt: #Combine the model defaults with the user choices and update payload
-                payload["prompt"] = f"{modelprompt},{payload['prompt']}"
-            if modelnegative:
-                payload["negative_prompt"] = f"{modelnegative},{payload['negative_prompt']}"
+            if modelprompt: payload["prompt"] = f"{modelprompt},{payload['prompt']}" #Combine the model defaults with the user choices and update payload
+            if modelnegative: payload["negative_prompt"] = f"{modelnegative},{payload['negative_prompt']}"
+                
     composite_image_bytes = await client.generate_image(payload) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
         view = Imagegenbuttons(payload, interaction.user.id)
-        await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
-    else:
-        await interaction.followup.send("API failed")
+        await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
+    else: await interaction.followup.send("API failed")
     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={payload["negative_prompt"]}, M={currentmodel}') #Print request to console
 
 client.run(SETTINGS["token"][0]) #run bot.
