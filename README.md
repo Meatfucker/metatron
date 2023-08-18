@@ -1,11 +1,11 @@
 # metatron
-A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, and a stable diffusion generation bot via the AUTOMATIC1111 API.
+A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, and a stable diffusion generation command via the AUTOMATIC1111 API.
 
 I wanted a bot to provide LLM and Image gen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
 
 To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 7 question/answer pairs for each user, which is lost on each restart. 
 
-Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the imagesettings.cfg file. Any negatives in it are applied to all gens. Useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, and a delete button which can only be used by the person who made the gen.
+Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the settings.cfg file. Any negatives in it are applied to all gens. Useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, and a delete button which can only be used by the person who made the gen.
 
 
 *INSTALLATION INSTRUCTIONS*
@@ -36,4 +36,4 @@ Image generation is handled via the /imagegen command. It provides very basic im
 -Run the bot, if all goes well itll say it has logged in. `python metatron.py`
 
 
-The files imagesettings.cfg and wordsettings.cfg are json containing the default settings for the A1111 and Oobabooga API's respectively. Careful about their structure, if you bork them up things will fail. You can add any key to them you like as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
+You can add any key to them you like to the settings,cfg imagesettings and wordsettings options as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
