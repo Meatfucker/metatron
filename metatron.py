@@ -128,8 +128,8 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
                 response_data = await response.json()
                 currentmodel = response_data.get("sd_model_checkpoint", "")  # Extract current model checkpoint value
         composite_image_bytes = await client.generate_image(self.payload) #generate image and place it into composite_image_bytes
-        await interaction.followup.send(content=f"Prompt: **`{self.payload['prompt']}`**, Negatives: `{self.payload['negative_prompt']}` Model: `{currentmodel}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]} | N={self.payload["negative_prompt"]} | M={currentmodel}')
+        await interaction.followup.send(content=f"Reroll", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
+        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]} | M={currentmodel}')
     
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -167,7 +167,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         userprompt = userprompt.replace(neg, '')
     payload["prompt"] = userprompt.strip() #put the prompt into the payload
     if usernegative is not None:
-        if "usernegative" not in ignore_fields: payload["negative_prompt"] += usernegative 
+        if "usernegative" not in ignore_fields: payload["negative_prompt"] = f"{usernegative},{payload['negative_prompt']}"
         else: usernegative = None
     if userbatch is not None:
         if "userbatch" not in ignore_fields: payload["batch_size"] = userbatch
@@ -215,6 +215,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         view = Imagegenbuttons(payload, interaction.user.id)
         await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else: await interaction.followup.send("API failed")
-    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={payload["negative_prompt"]}, M={currentmodel}') #Print request to console
+    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel}') #Print request to console
 
 client.run(SETTINGS["token"][0]) #run bot.
