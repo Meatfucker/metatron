@@ -76,7 +76,7 @@ class MyClient(discord.Client):
                         new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
                         await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
                         user_interaction_history.append(new_entry) #update user history
-                        if len(user_interaction_history) > 6: #if history is at max size, dump oldest result
+                        if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
                             user_interaction_history.pop(0)
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') #print to console for logging
                 
