@@ -120,7 +120,7 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
             super().__init__(*args, **kwargs)
             self.payload = payload
             self.userid = user_id
-    
+            self.timeout = None
     @discord.ui.button(label='Edit', emoji="✏️", style=discord.ButtonStyle.grey)
     async def edit(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(Editpromptmodal(self.payload))
