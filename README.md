@@ -3,12 +3,12 @@ A discord.py based machine learning bot. It provides a LLM chatbot via the oobab
 
 I wanted a bot to provide LLM and Image gen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
 
-To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 7 question/answer pairs for each user, which is lost on each restart. 
+To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 11 question/answer pairs for each user, which is lost on each restart. 
 
 Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the settings.cfg file. Any negatives in it are applied to all gens. Useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, and a delete button which can only be used by the person who made the gen.
 
 
-*INSTALLATION INSTRUCTIONS*
+#INSTALLATION INSTRUCTIONS
 
 -Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
@@ -37,3 +37,18 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 
 You can add any key to them you like to the settings,cfg imagesettings and wordsettings options as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
+
+#settings.cfg
+
+settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple model= lines to list all of your models.
+
+**wordapi** is the address and port of your ooba API endpoint
+**imageapi** is the same but for A1111
+**models** is the exact name as it appears in the webui including the hash, then a | followed by a mandatory positive prompt for that model(useful for loading loras). Then another | followed by a mandatory negative prompt. Youll want one of these lines for each model you want to be able to use in the bot. so the finished line will look like `modelname [hashcode]|positive prompt here|negative prompt here`
+**servers** is the Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server.
+**token** is your bots Discord token.
+**imagesettings** is the default payload it sends to the A111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash.
+**wordsettings** same but for Ooba
+**debug** This turns on debug info like raw API json responses and a few other things. Mostly only of use if you are debugging, hence the name.
+**ignorefields** This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like in the command but itll be ignored and the defaults used.
+**defaultmodel** This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the | and things after) You can have one of these for each server.
