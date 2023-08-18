@@ -190,6 +190,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     else:
         for default_model in SETTINGS["defaultmodel"]:
             default_model_values = default_model.split(",")
+            print(default_model_values)
             if str(interaction.guild.id) == default_model_values[0]:
                 model_payload = {"sd_model_checkpoint": default_model_values[1]}
                 async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
