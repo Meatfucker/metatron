@@ -156,7 +156,7 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'):
             super().__init__(*args, **kwargs)
             self.payload = payload
             self.timeout = None
-            self.add_item(discord.ui.TextInput(label="Prompt", default=self.payload["prompt"], required=True))
+            self.add_item(discord.ui.TextInput(label="Prompt", default=self.payload["prompt"], required=True, style=discord.TextStyle.long))
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         newprompt = str(self.children[0])
