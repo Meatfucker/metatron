@@ -69,15 +69,16 @@ class MyClient(discord.Client):
             async with aiohttp.ClientSession() as session: #make the api request
                 async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                     if response.status == 200:
-                        result = await response.json()
-                        print(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
-                        last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
-                        processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
-                        new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
-                        await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
-                        user_interaction_history.append(new_entry) #update user history
-                        if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
-                            user_interaction_history.pop(0)
+                        async with message.channel.typing():
+                            result = await response.json()
+                            print(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
+                            last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
+                            processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
+                            new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
+                            await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
+                            user_interaction_history.append(new_entry) #update user history
+                            if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
+                                user_interaction_history.pop(0)
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') #print to console for logging
                 
     async def generate_image(self, payload): #image generation api call
