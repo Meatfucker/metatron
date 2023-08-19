@@ -64,7 +64,7 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 
 **wordsettings** same but for Ooba
 
-**debug** This turns on debug info like raw API json responses and a few other things. Mostly only of use if you are debugging, hence the name.
+**debug** When set to True this turns on debug info like raw API json responses and a few other things. Mostly only of use if you are debugging, hence the name.
 
 **ignorefields** This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like in the command but itll be ignored and the defaults used.
 
