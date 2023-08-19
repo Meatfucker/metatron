@@ -28,9 +28,8 @@ with open("settings.cfg", "r") as settings_file:
                 if isinstance(SETTINGS[key], list): SETTINGS[key].append(value)
                 else: SETTINGS[key] = [SETTINGS[key], value]
             else: SETTINGS[key] = [value]  # Always store values as a list
-    print(f'DEBUG IMAGE SETTINGS BEGIN: {SETTINGS["imagesettings"][0]}') if SETTINGS["debug"][0] == "True" else None
-    print(f'DEBUG WORD SETTINGS BEGIN: {SETTINGS["wordsettings"][0]}') if SETTINGS["debug"][0] == "True" else None
-    
+    print(f'DEBUG SETTINGS BEGIN: {SETTINGS}') if SETTINGS["debug"][0] == "True" else None
+        
     for guild_id in SETTINGS["servers"]:
         MY_GUILD.append(discord.Object(id=guild_id))
         
@@ -58,6 +57,9 @@ class MyClient(discord.Client):
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
         if not self.user_interaction_history.get(message.author.id): self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
         if self.user.mentioned_in(message):
+            if SETTINGS["enableword"][0] != "True":
+                await message.channel.send("LLM generation is currently disabled.")
+                return
             if "request" not in locals(): #sets up a default payload if one doesnt already exist
                 request = self.defaultword_payload
             taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
@@ -147,7 +149,6 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
     @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
     async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.userid == interaction.user.id:
-            await interaction.response.defer()
             await interaction.message.delete()
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Delete   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.id}')
 
@@ -178,6 +179,9 @@ async def on_ready():
 @app_commands.choices(usermodel=client.load_models())  # Use the loaded models as choices
 
 async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None, userbatch: Optional[int] = None, userseed: Optional[int] = None, usersteps: Optional[int] = None):
+    if SETTINGS["enableimage"][0] != "True":
+            await interaction.response.send_message("Image generation is currently disabled.")
+            return
     await interaction.response.defer() #respond so discord doesnt get mad it takes a long time to actually respond to the message
     payload = client.defaultimage_payload.copy() #set up default payload 
     negative_values = [neg.strip() for neg in payload["negative_prompt"].split(",")] # Split negative values into a list
@@ -186,7 +190,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         userprompt = userprompt.replace(neg, '')
     payload["prompt"] = userprompt.strip() #put the prompt into the payload
     if usernegative is not None:
-        if "usernegative" not in ignore_fields: payload["negative_prompt"] = f"{usernegative},{payload['negative_prompt']}"
+        if "usernegative" not in ignore_fields: payload["negative_prompt"] = f"{usernegative},{payload['negative_prompt']}" 
         else: usernegative = None
     if userbatch is not None:
         if "userbatch" not in ignore_fields: payload["batch_size"] = userbatch
