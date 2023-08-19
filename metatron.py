@@ -66,34 +66,35 @@ class MyClient(discord.Client):
             if SETTINGS["enableword"][0] != "True":
                 await message.channel.send("LLM generation is currently disabled.")
                 return
-            if "request" not in locals(): #sets up a default payload if one doesnt already exist
-                request = self.defaultword_payload
-            taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
-            taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
-            url_pattern = r'(https?://[^\s]+)'
-            urls = re.findall(url_pattern, taggedmessage) #check messages for urls.
-            if SETTINGS["enableurls"][0] == "True":
-                for url in urls:
-                    extracted_text = await self.extract_text_from_url(url)
-                    if extracted_text: taggedmessage = (f'{taggedmessage}. {extracted_text}')
-            request["user_input"] = taggedmessage #load the user prompt into the api payload
-            user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
-            request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
-            request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
-            print(f'DEBUG WORD PAYLOAD BEGIN: {request}') if SETTINGS["debug"][0] == "True" else None
-            async with aiohttp.ClientSession() as session: #make the api request
-                async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
-                    if response.status == 200:
-                        async with message.channel.typing():
-                            result = await response.json()
-                            print(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
-                            last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
-                            processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
-                            new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
-                            await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
-                            user_interaction_history.append(new_entry) #update user history
-                            if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
-                                user_interaction_history.pop(0)
+            async with message.channel.typing():
+                if "request" not in locals(): #sets up a default payload if one doesnt already exist
+                    request = self.defaultword_payload
+                taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
+                taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
+                url_pattern = r'(https?://[^\s]+)'
+                urls = re.findall(url_pattern, taggedmessage) #check messages for urls.
+                if SETTINGS["enableurls"][0] == "True":
+                    for url in urls:
+                        extracted_text = await self.extract_text_from_url(url)
+                        if extracted_text: taggedmessage = (f'{taggedmessage}. {extracted_text}')
+                request["user_input"] = taggedmessage #load the user prompt into the api payload
+                user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
+                request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
+                request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
+                print(f'DEBUG WORD PAYLOAD BEGIN: {request}') if SETTINGS["debug"][0] == "True" else None
+                async with aiohttp.ClientSession() as session: #make the api request
+                    async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
+                        if response.status == 200:
+                            #async with message.channel.typing():
+                                result = await response.json()
+                                print(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
+                                last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
+                                processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
+                                new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
+                                await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
+                                user_interaction_history.append(new_entry) #update user history
+                                if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
+                                    user_interaction_history.pop(0)
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') #print to console for logging
                 
     async def generate_image(self, payload): #image generation api call
@@ -150,7 +151,7 @@ class MyClient(discord.Client):
             compileddescription = ""
             for sentence in summarizer(parser.document, 2):
                 compileddescription = (f' {compileddescription} {sentence}')
-            sitedescription = (f'The URL is a website about the following: {compileddescription}')
+            sitedescription = (f'The URL is a website about the following:{compileddescription}')
             return sitedescription
         
     
