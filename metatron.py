@@ -64,6 +64,13 @@ class MyClient(discord.Client):
                 request = self.defaultword_payload
             taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
             taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
+            
+            url_pattern = r'(https?://[^\s]+)'
+            urls = re.findall(url_pattern, taggedmessage)
+            if SETTINGS["enableurls"][0] == "True":
+                for url in urls:
+                    extracted_text = await self.extract_text_from_url(url)
+                    if extracted_text: taggedmessage = (f'{taggedmessage}. {extracted_text}')
             request["user_input"] = taggedmessage #load the user prompt into the api payload
             user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
             request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
@@ -113,6 +120,29 @@ class MyClient(discord.Client):
                             composite_image_bytes.seek(0) #go to the beginning of your bytes
                             return composite_image_bytes
                     else: return None
+                   
+    async def extract_text_from_url(self, url):
+        try:
+            response = requests.head(url)
+            if 'image' in response.headers.get('content-type'):
+                image_response = requests.get(url)
+                if image_response.status_code == 200:
+                    image = Image.open(io.BytesIO(image_response.content)) # Convert the image to PNG
+                    png_image = io.BytesIO()
+                    image.save(png_image, format='PNG')
+                    png_image_base64 = base64.b64encode(png_image.getvalue()).decode('utf-8') # Convert the image to base64
+                    png_payload = {"image": "data:image/png;base64," + png_image_base64}
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                photodescription = (f'The URL is a picture of the following topics: {data["caption"]}')
+                                return photodescription
+            else:
+                # Link summarizer stuff will go here.
+                return text
+        except Exception as e:
+            return str(e)  # Return the error message
     
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
