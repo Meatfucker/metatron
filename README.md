@@ -61,3 +61,7 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 **ignorefields** This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like in the command but itll be ignored and the defaults used.
 
 **defaultmodel** This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the | and things after) You can have one of these for each server.
+
+**enableimage** If this is set to anything besides True, image generation will be disabled.
+
+**enableword** Same but for the chatbot LLM
