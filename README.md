@@ -16,6 +16,8 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 -Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
 
+**Conda Install - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.**
+
 -Install miniconda if you dont already have conda.
 
 -Activate your base conda enviroment
@@ -23,6 +25,8 @@ Image generation is handled via the /imagegen command. It provides very basic im
 -Create a new enviroment `conda create -n metatron python`
 
 -Activate your new environment `conda activate metatron`
+
+**Global Install - Start here if you dont want conda**
 
 -Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
