@@ -24,7 +24,7 @@ from sumy.utils import get_stop_words
 MY_GUILD = []
 SETTINGS = {}
 
-with open("settings.cfg", "r") as settings_file:
+with open("settings.cfg", "r") as settings_file: #this builds the SETTINGS variable.
     for line in settings_file:
         if "=" in line:
             key, value = line.split("=", 1)
@@ -127,7 +127,7 @@ class MyClient(discord.Client):
                             return composite_image_bytes
                     else: return None
                    
-    async def extract_text_from_url(self, url):
+    async def extract_text_from_url(self, url): #This function takes a url and returns a description of either the webpage or the picture.
         response = requests.head(url)
         if 'image' in response.headers.get('content-type'):
             image_response = requests.get(url)
@@ -137,17 +137,17 @@ class MyClient(discord.Client):
                 image.save(png_image, format='PNG')
                 png_image_base64 = base64.b64encode(png_image.getvalue()).decode('utf-8') # Convert the image to base64
                 png_payload = {"image": "data:image/png;base64," + png_image_base64}
-                async with aiohttp.ClientSession() as session:
+                async with aiohttp.ClientSession() as session: #make the BLIP interrogate API call
                     async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
                         if response.status == 200:
                             data = await response.json()
                             photodescription = (f'The URL is a picture of the following topics: {data["caption"]}')
                             return photodescription
         else:
-            parser = HtmlParser.from_url(url, Tokenizer("english"))
+            parser = HtmlParser.from_url(url, Tokenizer("english")) 
             stemmer = Stemmer("english")
             summarizer = Summarizer(stemmer)
-            summarizer.stop_words = get_stop_words("english")
+            summarizer.stop_words = get_stop_words("english") #sumy summarizer setup stuff
             compileddescription = ""
             for sentence in summarizer(parser.document, 2):
                 compileddescription = (f' {compileddescription} {sentence}')
@@ -164,9 +164,10 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
             self.payload = payload
             self.userid = user_id
             self.timeout = None
+    
     @discord.ui.button(label='Edit', emoji="✏️", style=discord.ButtonStyle.grey)
     async def edit(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(Editpromptmodal(self.payload))
+        await interaction.response.send_modal(Editpromptmodal(self.payload)) #calls the edit modal
         
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -193,7 +194,7 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
             await interaction.message.delete()
             print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Delete   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.id}')
 
-class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'):
+class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing modal.
     def __init__(self, payload, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.payload = payload
@@ -207,7 +208,7 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'):
             newprompt = newprompt.replace(neg, '')
         self.payload["prompt"] = newprompt
         print(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
-        composite_image_bytes = await client.generate_image(self.payload)
+        composite_image_bytes = await client.generate_image(self.payload) #make the api call to generate the new image
         await interaction.followup.send(content=f'Edit: New prompt `{newprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
         print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
      
@@ -232,7 +233,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     payload["prompt"] = userprompt.strip() #put the prompt into the payload
     if usernegative is not None:
         if "usernegative" not in ignore_fields: payload["negative_prompt"] = f"{usernegative},{payload['negative_prompt']}" 
-        else: usernegative = None
+        else: usernegative = None #These checks allow us to ignore fields if we wish.
     if userbatch is not None:
         if "userbatch" not in ignore_fields: payload["batch_size"] = userbatch
         else: userbatch = None
@@ -253,7 +254,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                     print(f'USERMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
         else: usermodel = None
     else:
-        for default_model in SETTINGS["defaultmodel"]:
+        for default_model in SETTINGS["defaultmodel"]: #This loads the server specific default model if it exists
             default_model_values = default_model.split(",")
             if str(interaction.guild.id) == default_model_values[0]:
                 model_payload = {"sd_model_checkpoint": default_model_values[1]}
