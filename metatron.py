@@ -64,7 +64,6 @@ class MyClient(discord.Client):
                 request = self.defaultword_payload
             taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
             taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
-            
             url_pattern = r'(https?://[^\s]+)'
             urls = re.findall(url_pattern, taggedmessage)
             if SETTINGS["enableurls"][0] == "True":
