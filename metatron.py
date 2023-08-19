@@ -76,7 +76,12 @@ class MyClient(discord.Client):
                 if SETTINGS["enableurls"][0] == "True":
                     for url in urls:
                         extracted_text = await self.extract_text_from_url(url)
-                        if extracted_text: taggedmessage = (f'{taggedmessage}. {extracted_text}')
+                        taggedmessage = (f'{taggedmessage}. {extracted_text}')
+                    if message.attachments:
+                        url = message.attachments[0].url
+                        extracted_text = await self.extract_text_from_url(url)
+                        taggedmessage = (f'{taggedmessage}. {extracted_text}')
+                        
                 request["user_input"] = taggedmessage #load the user prompt into the api payload
                 user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
                 request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
