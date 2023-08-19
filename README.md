@@ -74,4 +74,4 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 
 **enableword** Same but for the chatbot LLM
 
-**enableurls** Enable the bot the ability to see image links.
+**enableurls** When set to True, enable the bot the ability to see image links and websites.
