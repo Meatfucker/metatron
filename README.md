@@ -44,17 +44,17 @@ Image generation is handled via the /imagegen command. It provides very basic im
 -Run the bot, if all goes well itll say it has logged in. `python metatron.py`
 
 
-You can add any key to them you like to the settings,cfg imagesettings and wordsettings options as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
+You can add any key you like to the settings,cfg imagesettings and wordsettings options as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
 
 # settings.cfg
 
-settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple model= lines to list all of your models.
+settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple models= lines to list all of your models.
 
 **wordapi** is the address and port of your ooba API endpoint
 
 **imageapi** is the same but for A1111
 
-**models** is the exact name as it appears in the webui including the hash, then a | followed by a mandatory positive prompt for that model(useful for loading loras). Then another | followed by a mandatory negative prompt. Youll want one of these lines for each model you want to be able to use in the bot. so the finished line will look like `modelname [hashcode]|positive prompt here|negative prompt here`
+**models** is the exact name as it appears in the webui including the hash, then a | followed by a mandatory positive prompt for that model(useful for loading loras). Then another | followed by a mandatory negative prompt. Youll want one of these lines for each model you want to be able to use in the bot. so the finished line will look like `models=modelname [hashcode]|positive prompt here|negative prompt here`
 
 **servers** is the Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server.
 
@@ -64,7 +64,7 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 
 **wordsettings** same but for Ooba
 
-**debug** This turns on debug info like raw API json responses and a few other things. Mostly only of use if you are debugging, hence the name.
+**debug** When set to True this turns on debug info like raw API json responses and a few other things. Mostly only of use if you are debugging, hence the name.
 
 **ignorefields** This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like in the command but itll be ignored and the defaults used.
 
@@ -74,4 +74,4 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 
 **enableword** Same but for the chatbot LLM
 
-**enableurls** Enable the bot the ability to see image links.
+**enableurls** When set to True, enable the bot the ability to see image links and websites.
