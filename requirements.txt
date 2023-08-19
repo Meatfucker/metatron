@@ -8,3 +8,4 @@ discord-py-interactions
 discord-typings
 emoji
 sniffio
+numpy

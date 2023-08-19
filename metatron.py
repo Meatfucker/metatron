@@ -14,6 +14,12 @@ import math
 import re
 from datetime import datetime
 import requests
+from sumy.parsers.html import HtmlParser
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lex_rank import LexRankSummarizer as Summarizer
+from sumy.nlp.stemmers import Stemmer
+from sumy.utils import get_stop_words
 
 MY_GUILD = []
 SETTINGS = {}
@@ -65,7 +71,7 @@ class MyClient(discord.Client):
             taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
             taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
             url_pattern = r'(https?://[^\s]+)'
-            urls = re.findall(url_pattern, taggedmessage)
+            urls = re.findall(url_pattern, taggedmessage) #check messages for urls.
             if SETTINGS["enableurls"][0] == "True":
                 for url in urls:
                     extracted_text = await self.extract_text_from_url(url)
@@ -121,27 +127,32 @@ class MyClient(discord.Client):
                     else: return None
                    
     async def extract_text_from_url(self, url):
-        try:
-            response = requests.head(url)
-            if 'image' in response.headers.get('content-type'):
-                image_response = requests.get(url)
-                if image_response.status_code == 200:
-                    image = Image.open(io.BytesIO(image_response.content)) # Convert the image to PNG
-                    png_image = io.BytesIO()
-                    image.save(png_image, format='PNG')
-                    png_image_base64 = base64.b64encode(png_image.getvalue()).decode('utf-8') # Convert the image to base64
-                    png_payload = {"image": "data:image/png;base64," + png_image_base64}
-                    async with aiohttp.ClientSession() as session:
-                        async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                photodescription = (f'The URL is a picture of the following topics: {data["caption"]}')
-                                return photodescription
-            else:
-                # Link summarizer stuff will go here.
-                return text
-        except Exception as e:
-            return str(e)  # Return the error message
+        response = requests.head(url)
+        if 'image' in response.headers.get('content-type'):
+            image_response = requests.get(url)
+            if image_response.status_code == 200:
+                image = Image.open(io.BytesIO(image_response.content)) # Convert the image to PNG
+                png_image = io.BytesIO()
+                image.save(png_image, format='PNG')
+                png_image_base64 = base64.b64encode(png_image.getvalue()).decode('utf-8') # Convert the image to base64
+                png_payload = {"image": "data:image/png;base64," + png_image_base64}
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            photodescription = (f'The URL is a picture of the following topics: {data["caption"]}')
+                            return photodescription
+        else:
+            parser = HtmlParser.from_url(url, Tokenizer("english"))
+            stemmer = Stemmer("english")
+            summarizer = Summarizer(stemmer)
+            summarizer.stop_words = get_stop_words("english")
+            compileddescription = ""
+            for sentence in summarizer(parser.document, 2):
+                compileddescription = (f' {compileddescription} {sentence}')
+            sitedescription = (f'The URL is a website about the following: {compileddescription}')
+            return sitedescription
+        
     
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
