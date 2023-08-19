@@ -13,7 +13,6 @@ import re
 from datetime import datetime
 import requests
 from sumy.parsers.html import HtmlParser
-from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer as Summarizer
 from sumy.nlp.stemmers import Stemmer
