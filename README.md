@@ -74,7 +74,7 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 
 **enableword** Same but for the chatbot LLM
 
-**enableurls** When set to True, enable the bot the ability to see image links and websites.
+**enableurls** When set to True, enable the ability to see image links and websites.
 
 **maxbatch** The maximum batch size the bot can gen.
 
