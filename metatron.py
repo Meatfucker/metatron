@@ -43,9 +43,11 @@ class MyClient(discord.Client):
         self.defaultword_payload = json.loads(SETTINGS["wordsettings"][0])
         self.user_interaction_history = {} #Set up user LLM history variable.
         self.models = []
+        self.loras = []
             
     async def setup_hook(self): #Sync slash commands with discord servers Im on.
         await client.load_models()
+        await client.load_loras()
         for guild_obj in MY_GUILD:
             self.tree.copy_global_to(guild=guild_obj)
             await self.tree.sync(guild=guild_obj)
@@ -57,6 +59,14 @@ class MyClient(discord.Client):
                 for title in response_data:
                     self.models.append(app_commands.Choice(name=title["title"], value=title["title"]))
         return self.models
+        
+    async def load_loras(self): #Get list of loras for user interface
+        async with aiohttp.ClientSession() as session: 
+            async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/loras') as response:
+                response_data = await response.json()
+                for name in response_data:
+                    self.loras.append(app_commands.Choice(name=name["name"], value=name["name"]))
+        return self.loras
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
@@ -123,7 +133,7 @@ class MyClient(discord.Client):
                                 col = idx % num_images_per_row
                                 composite_image.paste(image, (col * width, row * height))
                             composite_image_bytes = io.BytesIO() # Convert the composite image to bytes and encode to base64
-                            composite_image.save(composite_image_bytes, format='PNG') #this makes it bytes
+                            composite_image.save(composite_image_bytes, format='PNG') #this turns the bytes into png
                             composite_image_base64 = base64.b64encode(composite_image_bytes.getvalue()).decode() #this makes it base64 
                             png_payload = {"image": "data:image/png;base64," + composite_image_base64} #prepare image for posting to discord
                             composite_image_bytes.seek(0) #go to the beginning of your bytes
@@ -220,9 +230,10 @@ async def on_ready():
     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
 
 @client.tree.command() #Begins imagen slash command stuff 
-@app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps")
+@app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps", userlora="Pick a LORA", userwidth="Image width", userheight="Image height")
 @app_commands.choices(usermodel=client.models)  # Use the loaded models as choices
-async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None, userbatch: Optional[int] = None, userseed: Optional[int] = None, usersteps: Optional[int] = None):
+@app_commands.choices(userlora=client.loras)
+async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None, userlora: Optional[app_commands.Choice[str]] = None, userbatch: Optional[int] = None, userseed: Optional[int] = None, usersteps: Optional[int] = None, userheight: Optional[int] = None, userwidth: Optional[int] = None):
     if SETTINGS["enableimage"][0] != "True":
             await interaction.response.send_message("Image generation is currently disabled.")
             return
@@ -237,7 +248,9 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         if "usernegative" not in ignore_fields: payload["negative_prompt"] = f"{usernegative},{payload['negative_prompt']}" 
         else: usernegative = None #These checks allow us to ignore fields if we wish.
     if userbatch is not None:
-        if "userbatch" not in ignore_fields: payload["batch_size"] = userbatch
+        if "userbatch" not in ignore_fields:
+             if userbatch <= int(SETTINGS["maxbatch"][0]):
+                payload["batch_size"] = userbatch
         else: userbatch = None
     if userseed is not None:
         if "userseed" not in ignore_fields: payload["seed"] = userseed
@@ -245,6 +258,20 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     if usersteps is not None:
         if "usersteps" not in ignore_fields: payload["steps"] = usersteps
         else: usersteps = None
+    if userwidth is not None:
+        if "userwidth" not in ignore_fields: 
+            if userwidth <= int(SETTINGS["maxwidth"][0]):
+                payload["width"] = userwidth
+    if userheight is not None:
+        if "userheight" not in ignore_fields: 
+            if userheight <= int(SETTINGS["maxheight"][0]):
+                payload["height"] = userheight
+    if userlora is not None:
+        if "userlora" not in ignore_fields:
+            pattern = r"value='(.*?)'" #regex to strip unneed chars
+            matches = re.findall(pattern, str(userlora))
+            payload["prompt"] = f"<lora:{matches[0]}:1>,{payload['prompt']}"
+        else: userlora = None
     if usermodel is not None: #Check the user models choice if present
         if "usermodel" not in ignore_fields:  
             pattern = r"value='(.*?)'" #regex to strip unneed chars
