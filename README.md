@@ -18,7 +18,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Python
 
-**Discord Bot Setup
+**Discord Bot Setup**
 
 --Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
