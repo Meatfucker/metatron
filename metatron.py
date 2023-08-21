@@ -94,7 +94,7 @@ class MyClient(discord.Client):
                 user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
                 request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
                 request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
-                print(f'DEBUG WORD PAYLOAD BEGIN: {request}') if SETTINGS["debug"][0] == "True" else None
+                print(f'DEBUG WORD PAYLOAD BEGIN: {json.dumps(request, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                 async with aiohttp.ClientSession() as session: #make the api request
                     async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                         if response.status == 200:
@@ -154,7 +154,8 @@ class MyClient(discord.Client):
                     async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
                         if response.status == 200:
                             data = await response.json()
-                            photodescription = (f'The URL is a picture of the following topics: {data["caption"]}')
+                            cleaneddescription = data["caption"].split(",")[0].strip()
+                            photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
                             return photodescription
         else:
             parser = HtmlParser.from_url(url, Tokenizer("english")) 
