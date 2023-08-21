@@ -210,10 +210,10 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
 
 class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing modal.
     def __init__(self, payload, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.payload = payload
-            self.timeout = None
-            self.add_item(discord.ui.TextInput(label="Prompt", default=self.payload["prompt"], required=True, style=discord.TextStyle.long))
+        super().__init__(*args, **kwargs)
+        self.payload = payload
+        self.timeout = None
+        self.add_item(discord.ui.TextInput(label="Prompt", default=self.payload["prompt"], required=True, style=discord.TextStyle.long))
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         newprompt = str(self.children[0])
