@@ -32,7 +32,6 @@ with open("settings.cfg", "r") as settings_file: #this builds the SETTINGS varia
                 else: SETTINGS[key] = [SETTINGS[key], value]
             else: SETTINGS[key] = [value]  # Always store values as a list
     print(f'DEBUG SETTINGS BEGIN: {SETTINGS}') if SETTINGS["debug"][0] == "True" else None
-        
     for guild_id in SETTINGS["servers"]:
         MY_GUILD.append(discord.Object(id=guild_id))
         
@@ -44,8 +43,7 @@ class MyClient(discord.Client):
         self.defaultword_payload = json.loads(SETTINGS["wordsettings"][0])
         self.user_interaction_history = {} #Set up user LLM history variable.
         self.models = []
-        
-        
+            
     async def setup_hook(self): #Sync slash commands with discord servers Im on.
         await client.load_models()
         for guild_obj in MY_GUILD:
@@ -82,7 +80,6 @@ class MyClient(discord.Client):
                         url = message.attachments[0].url
                         extracted_text = await self.extract_text_from_url(url)
                         taggedmessage = (f'{taggedmessage}. {extracted_text}')
-                        
                 request["user_input"] = taggedmessage #load the user prompt into the api payload
                 user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
                 request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
@@ -159,10 +156,10 @@ class MyClient(discord.Client):
                 compileddescription = (f' {compileddescription} {sentence}')
             sitedescription = (f'The URL is a website about the following:{compileddescription}')
             return sitedescription
-        
-    
+ 
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
+
 class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image gens
     
     def __init__(self, payload, user_id, *args, **kwargs):
@@ -221,12 +218,10 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
 @client.event
 async def on_ready():
     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
-    
-@client.tree.command() #Begins imagen slash command stuff 
 
+@client.tree.command() #Begins imagen slash command stuff 
 @app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps")
 @app_commands.choices(usermodel=client.models)  # Use the loaded models as choices
-
 async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None, userbatch: Optional[int] = None, userseed: Optional[int] = None, usersteps: Optional[int] = None):
     if SETTINGS["enableimage"][0] != "True":
             await interaction.response.send_message("Image generation is currently disabled.")
@@ -269,7 +264,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                     async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
                         response_data = await response.json()
                         print(f'DEFAULTMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
-                               
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
@@ -281,10 +275,8 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 if model == currentmodel: #find the matching model and load the model default positive and negative prompts
                     modelprompt = modeltemp
                     modelnegative = modelnegtemp
-                
             if modelprompt: payload["prompt"] = f"{modelprompt},{payload['prompt']}" #Combine the model defaults with the user choices and update payload
             if modelnegative: payload["negative_prompt"] = f"{modelnegative},{payload['negative_prompt']}"
-                
     composite_image_bytes = await client.generate_image(payload) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
         view = Imagegenbuttons(payload, interaction.user.id)
