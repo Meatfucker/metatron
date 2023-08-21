@@ -43,18 +43,22 @@ class MyClient(discord.Client):
         self.defaultimage_payload = json.loads(SETTINGS["imagesettings"][0])
         self.defaultword_payload = json.loads(SETTINGS["wordsettings"][0])
         self.user_interaction_history = {} #Set up user LLM history variable.
-    
+        self.models = []
+        
+        
     async def setup_hook(self): #Sync slash commands with discord servers Im on.
+        await client.load_models()
         for guild_obj in MY_GUILD:
             self.tree.copy_global_to(guild=guild_obj)
             await self.tree.sync(guild=guild_obj)
     
-    def load_models(self): #Get list of models for user interface
-        models = []
-        for line in SETTINGS["models"]:
-            model = line.strip().split("|")[0]
-            models.append(app_commands.Choice(name=model, value=model))
-        return models
+    async def load_models(self): #Get list of models for user interface
+        async with aiohttp.ClientSession() as session: 
+            async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/sd-models') as response:
+                response_data = await response.json()
+                for title in response_data:
+                    self.models.append(app_commands.Choice(name=title["title"], value=title["title"]))
+        return self.models
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
@@ -217,10 +221,11 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
 @client.event
 async def on_ready():
     print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
-
+    
 @client.tree.command() #Begins imagen slash command stuff 
+
 @app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps")
-@app_commands.choices(usermodel=client.load_models())  # Use the loaded models as choices
+@app_commands.choices(usermodel=client.models)  # Use the loaded models as choices
 
 async def imagegen(interaction: discord.Interaction, userprompt: str, usernegative: Optional[str] = None, usermodel: Optional[app_commands.Choice[str]] = None, userbatch: Optional[int] = None, userseed: Optional[int] = None, usersteps: Optional[int] = None):
     if SETTINGS["enableimage"][0] != "True":
@@ -269,11 +274,14 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
             currentmodel = response_data.get("sd_model_checkpoint", "")  # Extract current model checkpoint value
+            modelprompt = ""
+            modelnegative = ""
             for line in SETTINGS["models"]:
                 model, modeltemp, modelnegtemp = line.strip().split("|", 2)  #grab the second and third values and put them into variables
                 if model == currentmodel: #find the matching model and load the model default positive and negative prompts
                     modelprompt = modeltemp
                     modelnegative = modelnegtemp
+                
             if modelprompt: payload["prompt"] = f"{modelprompt},{payload['prompt']}" #Combine the model defaults with the user choices and update payload
             if modelnegative: payload["negative_prompt"] = f"{modelnegative},{payload['negative_prompt']}"
                 

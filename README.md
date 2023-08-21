@@ -54,7 +54,7 @@ settings.cfg provides all of the settings for the bot. If the example file has m
 
 **imageapi** is the same but for A1111
 
-**models** is the exact name as it appears in the webui including the hash, then a | followed by a mandatory positive prompt for that model(useful for loading loras). Then another | followed by a mandatory negative prompt. Youll want one of these lines for each model you want to be able to use in the bot. so the finished line will look like `models=modelname [hashcode]|positive prompt here|negative prompt here`
+**models** is the exact name as it appears in the webui including the hash, then a | followed by a mandatory positive prompt for that model(useful for loading loras). Then another | followed by a mandatory negative prompt. Youll want one of these lines for each model you want to have model defaults for. The final line will look like this.`models=modelname [hashcode]|positive prompt here|negative prompt here`
 
 **servers** is the Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server.
 
