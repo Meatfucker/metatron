@@ -52,7 +52,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 # settings.cfg
 
-settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple models= lines to list all of your models.
+settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple models= lines to list all of your model defaults.
 
 See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
 
@@ -66,7 +66,7 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 
 **token** is your bots Discord token.
 
-**imagesettings** is the default payload it sends to the A111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash.
+**imagesettings** is the default payload it sends to the A1111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash.
 
 **wordsettings** same but for Ooba
 
