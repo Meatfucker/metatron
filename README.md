@@ -38,15 +38,15 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 **Global Install - Start here if you dont want conda**
 
--Download the repo `git clone https://github.com/Meatfucker/metatron.git`
+--Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
--Install the bots requirements `pip install -r requirements.txt`
+--Install the bots requirements `pip install -r requirements.txt`
 
--Install the nltk tokenizer for English `python -c "import nltk; nltk.download('punkt')"` URL parsing for the LLM side will not work without this, though image parsing will.
+--Install the nltk tokenizer for English `python -c "import nltk; nltk.download('punkt')"` URL parsing for the LLM side will not work without this, though image parsing will.
 
--Read and edit settings-example.cfg, Make your required changes and save as settings.cfg
+--Read and edit settings-example.cfg, Make your required changes and save as settings.cfg
 
--Run the bot, if all goes well itll say it has logged in. `python metatron.py`
+--Run the bot, if all goes well itll say it has logged in. `python metatron.py`
 
 
 
