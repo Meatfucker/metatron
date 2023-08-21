@@ -10,21 +10,31 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 # INSTALLATION INSTRUCTIONS
 
--Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
+**REQUIREMENTS**
 
--Go to the Bot tab on the Developer portal site and enable Privileged Gateway Intents. You need Presence, Server Members, and Message Content enabled.
+--A Working A1111 instance with --api enabled.
 
--Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
+--A Working oobabooga instance with --api enabled **AND A MODEL ALREADY LOADED**. Loading LLMs is somewhat complex and VERY slow so you must manually load a model via the ooba API first.
 
-**Conda Install - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.**
+--Python
 
--Install miniconda if you dont already have conda.
+**Discord Bot Setup
 
--Activate your base conda enviroment
+--Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
--Create a new enviroment `conda create -n metatron python`
+--Go to the Bot tab on the Developer portal site and enable Privileged Gateway Intents. You need Presence, Server Members, and Message Content enabled.
 
--Activate your new environment `conda activate metatron`
+--Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
+
+**Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.**
+
+--Install miniconda if you dont already have conda.
+
+--Activate your base conda enviroment
+
+--Create a new enviroment `conda create -n metatron python`
+
+--Activate your new environment `conda activate metatron`
 
 **Global Install - Start here if you dont want conda**
 
@@ -36,19 +46,15 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 -Read and edit settings-example.cfg, Make your required changes and save as settings.cfg
 
-
-
-
-
-
 -Run the bot, if all goes well itll say it has logged in. `python metatron.py`
 
 
-You can add any key you like to the settings,cfg imagesettings and wordsettings options as long as the API recognizes them. See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
 
 # settings.cfg
 
 settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple models= lines to list all of your models.
+
+See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
 
 **wordapi** is the address and port of your ooba API endpoint
 
