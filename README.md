@@ -10,7 +10,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 ## INSTALLATION INSTRUCTIONS
 
-### EQUIREMENTS
+### REQUIREMENTS
 
 --A Working A1111 instance with --api enabled.
 
