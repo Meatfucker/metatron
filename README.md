@@ -10,7 +10,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 ## INSTALLATION INSTRUCTIONS
 
-###REQUIREMENTS
+### EQUIREMENTS
 
 --A Working A1111 instance with --api enabled.
 
@@ -18,7 +18,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Python
 
-###Discord Bot Setup
+### Discord Bot Setup
 
 --Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
@@ -26,7 +26,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
 
-###Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.
+### Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.
 
 --Install miniconda if you dont already have conda.
 
@@ -36,7 +36,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Activate your new environment `conda activate metatron`
 
-###Global Install - Start here if you dont want conda
+### Global Install - Start here if you dont want conda
 
 --Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
@@ -60,7 +60,7 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 |----|----|----|
 | wordapi | Address and port of your ooba API endpoint | `wordapi=http://localhost:5000` |
 | imageapi | Address and port of your A1111 API endpoint | `imageapi=http://localhost:7860` |
-| models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1 [a532e5bb]|positive prompt here|negative prompt here` |
+| models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1 [a532e5bb]\|positive prompt here\|negative prompt here` |
 | servers | Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server. | `servers=34534523663` |
 | token | Bots Discord token. | `token=90A8DF0G8907ASD7F097ADFQ98WE7` |
 | imagesettings | Default payload it sends to the A1111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
