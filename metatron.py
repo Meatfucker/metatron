@@ -70,6 +70,9 @@ class MyClient(discord.Client):
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
+        banned_users = SETTINGS["bannedusers"][0].split(',')
+        if str(message.author.id) in banned_users:
+            return  # Exit the function if the author is banned
         if not self.user_interaction_history.get(message.author.id): self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
         if self.user.mentioned_in(message):
             if SETTINGS["enableword"][0] != "True":
@@ -238,6 +241,9 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     if SETTINGS["enableimage"][0] != "True":
             await interaction.response.send_message("Image generation is currently disabled.")
             return
+    banned_users = SETTINGS["bannedusers"][0].split(',')
+    if str(interaction.user.id) in banned_users:
+            return  # Exit the function if the author is banned
     await interaction.response.defer() #respond so discord doesnt get mad it takes a long time to actually respond to the message
     payload = client.defaultimage_payload.copy() #set up default payload 
     negative_values = [neg.strip() for neg in payload["negative_prompt"].split(",")] # Split negative values into a list

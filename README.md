@@ -87,3 +87,5 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 **maxwidth** The maximum horizontal resolution the bot can gen.
 
 **maxheight** same but vertical.
+
+**bannedusers** comma separated list of discord user ids to ignore.
