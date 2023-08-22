@@ -14,7 +14,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 A Working A1111 instance with --api enabled.
 
-A Working oobabooga instance with --api enabled **AND A MODEL ALREADY LOADED**. Loading LLMs is somewhat complex and VERY slow so you must manually load a model via the ooba API first.
+A Working oobabooga instance with --api enabled **AND A MODEL ALREADY LOADED**. Loading LLMs is somewhat complex and VERY slow so you must manually load a model via the ooba webui first.
 
 Python
 
@@ -60,14 +60,14 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 |----|----|----|
 | wordapi | Address and port of your ooba API endpoint | `wordapi=http://localhost:5000` |
 | imageapi | Address and port of your A1111 API endpoint | `imageapi=http://localhost:7860` |
-| models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1 [a532e5bb]\|positive prompt here\|negative prompt here` |
+| models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1.safetensors [a532e5bb]\|positive prompt here\|negative prompt here` |
 | servers | Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server. | `servers=34534523663` |
 | token | Bots Discord token. | `token=90A8DF0G8907ASD7F097ADFQ98WE7` |
 | imagesettings | Default payload it sends to the A1111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
 | wordsettings | Default payload it sends to the Ooba API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
 | debug | Turns on debug information. | `debug=True` |
 | ignorefields | This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like but itll be ignored and the defaults used. | `ignorefields=userbatch,userwidth,userheight` |
-| defaultmodel | This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the \| and things after) You can have one of these for each server. | `defaultmodel=345664623455,Goobs-v34 [a67efe20]`
+| defaultmodel | This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the \| and things after) You can have one of these for each server. | `defaultmodel=345664623455,Goobs-v34.ckpt [a67efe20]`
 | enableimage | If set to anything besides True, image generation will be disabled. | `enableimage=True` |
 | enableword | If set to anything besides True, LLM generation will be disabled. | `enableword=True` |
 | enableurls | If set to anything besides True, URL and Image parsing for the LLM will be disabled. | `enableurls=True` |
