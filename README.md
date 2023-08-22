@@ -12,41 +12,41 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 ### REQUIREMENTS
 
---A Working A1111 instance with --api enabled.
+A Working A1111 instance with --api enabled.
 
---A Working oobabooga instance with --api enabled **AND A MODEL ALREADY LOADED**. Loading LLMs is somewhat complex and VERY slow so you must manually load a model via the ooba API first.
+A Working oobabooga instance with --api enabled **AND A MODEL ALREADY LOADED**. Loading LLMs is somewhat complex and VERY slow so you must manually load a model via the ooba API first.
 
---Python
+Python
 
 ### Discord Bot Setup
 
---Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
+Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
---Go to the Bot tab on the Developer portal site and enable Privileged Gateway Intents. You need Presence, Server Members, and Message Content enabled.
+Go to the Bot tab on the Developer portal site and enable Privileged Gateway Intents. You need Presence, Server Members, and Message Content enabled.
 
---Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
+Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
 
 ### Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.
 
---Install miniconda if you dont already have conda.
+Install miniconda if you dont already have conda.
 
---Activate your base conda enviroment
+Activate your base conda enviroment
 
---Create a new enviroment `conda create -n metatron python`
+Create a new enviroment `conda create -n metatron python`
 
---Activate your new environment `conda activate metatron`
+Activate your new environment `conda activate metatron`
 
 ### Global Install - Start here if you dont want conda
 
---Download the repo `git clone https://github.com/Meatfucker/metatron.git`
+Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
---Install the bots requirements `pip install -r requirements.txt`
+Install the bots requirements `pip install -r requirements.txt`
 
---Install the nltk tokenizer for English `python -c "import nltk; nltk.download('punkt')"` URL parsing for the LLM side will not work without this, though image parsing will.
+Install the nltk tokenizer for English `python -c "import nltk; nltk.download('punkt')"` URL parsing for the LLM side will not work without this, though image parsing will.
 
---Read and edit settings-example.cfg, Make your required changes and save as settings.cfg
+Read and edit settings-example.cfg, Make your required changes and save as settings.cfg
 
---Run the bot, if all goes well itll say it has logged in. `python metatron.py`
+Run the bot, if all goes well itll say it has logged in. `python metatron.py`
 
 
 
