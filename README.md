@@ -8,9 +8,9 @@ To chat with the bot just tag it or reply to something it says. It keeps a separ
 Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the settings.cfg file. Any negatives in it are applied to all gens and also stripped from prompts, useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, a edit button to edit the current prompt, and a delete button which can only be used by the person who made the gen.
 
 
-# INSTALLATION INSTRUCTIONS
+## INSTALLATION INSTRUCTIONS
 
-**REQUIREMENTS**
+###REQUIREMENTS
 
 --A Working A1111 instance with --api enabled.
 
@@ -18,7 +18,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Python
 
-**Discord Bot Setup**
+###Discord Bot Setup
 
 --Go to the Discord Developer portal and create a new bot and generate a token for it. Write this token down or else youll have to generate a new one, it only shows you once.
 
@@ -26,7 +26,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
 
-**Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.**
+###Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.
 
 --Install miniconda if you dont already have conda.
 
@@ -36,7 +36,7 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 --Activate your new environment `conda activate metatron`
 
-**Global Install - Start here if you dont want conda**
+###Global Install - Start here if you dont want conda
 
 --Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
@@ -50,42 +50,28 @@ Image generation is handled via the /imagegen command. It provides very basic im
 
 
 
-# settings.cfg
+## settings.cfg
 
 settings.cfg provides all of the settings for the bot. If the example file has more than one line with the same first value, that means you can have multiple. For example you can have multiple models= lines to list all of your model defaults.
 
 See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples For some info on Oobas API and https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/3734 for info on the A1111 API.
 
-**wordapi** is the address and port of your ooba API endpoint
-
-**imageapi** is the same but for A1111
-
-**models** is the exact name as it appears in the webui including the hash, then a | followed by a mandatory positive prompt for that model(useful for loading loras). Then another | followed by a mandatory negative prompt. Youll want one of these lines for each model you want to have model defaults for. The final line will look like this.`models=modelname [hashcode]|positive prompt here|negative prompt here`
-
-**servers** is the Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server.
-
-**token** is your bots Discord token.
-
-**imagesettings** is the default payload it sends to the A1111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash.
-
-**wordsettings** same but for Ooba
-
-**debug** When set to True this turns on debug info like raw API json responses and a few other things. Mostly only of use if you are debugging, hence the name.
-
-**ignorefields** This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like in the command but itll be ignored and the defaults used.
-
-**defaultmodel** This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the | and things after) You can have one of these for each server.
-
-**enableimage** If this is set to anything besides True, image generation will be disabled.
-
-**enableword** Same but for the chatbot LLM
-
-**enableurls** When set to True, enable the ability to see image links and websites.
-
-**maxbatch** The maximum batch size the bot can gen.
-
-**maxwidth** The maximum horizontal resolution the bot can gen.
-
-**maxheight** same but vertical.
-
-**bannedusers** comma separated list of discord user ids to ignore.
+| OPTION | DESCRIPTION | EXAMPLE |
+|----|----|----|
+| wordapi | Address and port of your ooba API endpoint | `wordapi=http://localhost:5000` |
+| imageapi | Address and port of your A1111 API endpoint | `imageapi=http://localhost:7860` |
+| models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1 [a532e5bb]|positive prompt here|negative prompt here` |
+| servers | Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server. | `servers=34534523663` |
+| token | Bots Discord token. | `token=90A8DF0G8907ASD7F097ADFQ98WE7` |
+| imagesettings | Default payload it sends to the A1111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
+| wordsettings | Default payload it sends to the Ooba API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
+| debug | Turns on debug information. | `debug=True` |
+| ignorefields | This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like but itll be ignored and the defaults used. | `ignorefields=userbatch,userwidth,userheight` |
+| defaultmodel | This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the \| and things after) You can have one of these for each server. | `defaultmodel=345664623455,Goobs-v34 [a67efe20]`
+| enableimage | If set to anything besides True, image generation will be disabled. | `enableimage=True` |
+| enableword | If set to anything besides True, LLM generation will be disabled. | `enableword=True` |
+| enableurls | If set to anything besides True, URL and Image parsing for the LLM will be disabled. | `enableurls=True` |
+| maxbatch | The maximum batch size the bot can gen. | `maxbatch=4` |
+| maxwidth | The maximum horizontal resolution the bot can gen. | `maxwidth=512` |
+| maxheight | The maximum vertical resolution the bot can gen. | `maxheight=512` |
+| bannedusers | Comma separated list of discord user ids to ignore. | `bannedusers=34524353425346,12341246577` |
