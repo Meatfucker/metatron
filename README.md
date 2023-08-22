@@ -36,7 +36,7 @@ Create a new enviroment `conda create -n metatron python`
 
 Activate your new environment `conda activate metatron`
 
-### Global Install - Start here if you dont want conda
+### Install - Start here if you dont want conda or have already activated and are in your metatron conda env.
 
 Download the repo `git clone https://github.com/Meatfucker/metatron.git`
 
