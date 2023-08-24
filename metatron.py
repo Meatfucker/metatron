@@ -19,9 +19,9 @@ from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
 import logging
 import sys
-logging.getLogger('PIL').setLevel(logging.WARNING)
-logging.basicConfig(filename='bot.log', level=logging.DEBUG, format='%(message)s')
-console_handler = logging.StreamHandler(sys.stdout)
+logging.getLogger('PIL').setLevel(logging.WARNING) #This fixes a bug in PIL thatll fill the logging full of trash otherwise
+logging.basicConfig(filename='bot.log', level=logging.DEBUG, format='%(message)s') #log to this file.
+console_handler = logging.StreamHandler(sys.stdout) 
 console_handler.setLevel(logging.DEBUG)
 console_formatter = logging.Formatter('%(message)s')
 console_handler.setFormatter(console_formatter)
@@ -145,19 +145,16 @@ class MyClient(discord.Client):
                                 row = idx // num_images_per_row
                                 col = idx % num_images_per_row
                                 composite_image.paste(image, (col * width, row * height))
-                            composite_image_bytes = io.BytesIO() # Convert the composite image to bytes and encode to base64
+                            composite_image_bytes = io.BytesIO() # load the composite image from bytes
                             composite_image.save(composite_image_bytes, format='PNG') #this turns the bytes into png
-                            if SETTINGS["saveimages"][0] == "True":
+                            if SETTINGS["saveimages"][0] == "True": 
                                 current_datetime = datetime.now()
-                                current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+                                current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S") #This removes chars that cant be filenames
                                 pattern = r'[\/:*?"<>|]'
-                                sanitized_prompt = re.sub(pattern, '', payload["prompt"])
+                                sanitized_prompt = re.sub(pattern, '', payload["prompt"]) #this removes chars that cant be filenames
                                 imagesavepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}.png'
                                 with open(imagesavepath, "wb") as output_file:
-                                    output_file.write(composite_image_bytes.getvalue())
-                                
-                            composite_image_base64 = base64.b64encode(composite_image_bytes.getvalue()).decode() #this makes it base64 
-                            png_payload = {"image": "data:image/png;base64," + composite_image_base64} #prepare image for posting to discord
+                                    output_file.write(composite_image_bytes.getvalue()) #saves the gen to disk
                             composite_image_bytes.seek(0) #go to the beginning of your bytes
                             return composite_image_bytes
                     else: return None

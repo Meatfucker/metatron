@@ -1,0 +1,9 @@
+PyNaCl is not installed, voice will NOT be supported
+on_ready has successfully been registered as an event
+Using proactor: IocpProactor
+logging in using static token
+Shard ID None has connected to Gateway (Session ID: 0ab9571cb47673a3c4c59fc87dd04112).
+2023-08-24 00:50:15 | Logged in as Metatron#8777 (ID: 1139796002757410817)
+2023-08-24 00:50:34 | imagegen | meatfucker:176484618017570817 | Degenerate Scumbags:metatron-testing | P=glorpglorp my blorp, N=None, M=dreamshaper_7.safetensors [ed989d673d]
+2023-08-24 00:50:56 | Edit     | meatfucker:176484618017570817 | Degenerate Scumbags:metatron-testing | P=glorpglorp my blorp florp
+2023-08-24 00:51:09 | Reroll   | meatfucker:176484618017570817 | Degenerate Scumbags:metatron-testing | P=glorpglorp my blorp florp
