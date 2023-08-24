@@ -75,3 +75,5 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 | maxwidth | The maximum horizontal resolution the bot can gen. | `maxwidth=512` |
 | maxheight | The maximum vertical resolution the bot can gen. | `maxheight=512` |
 | bannedusers | Comma separated list of discord user ids to ignore. | `bannedusers=34524353425346,12341246577` |
+| saveimages | If set to True, will save generated images | `saveimages=True` |
+| savepath | The path where you want the images saved | `savepath=outputs` |

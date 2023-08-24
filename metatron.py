@@ -17,6 +17,15 @@ from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer as Summarizer
 from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
+import logging
+import sys
+logging.getLogger('PIL').setLevel(logging.WARNING)
+logging.basicConfig(filename='bot.log', level=logging.DEBUG, format='%(message)s')
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.DEBUG)
+console_formatter = logging.Formatter('%(message)s')
+console_handler.setFormatter(console_formatter)
+logging.getLogger().addHandler(console_handler)
 
 MY_GUILD = []
 SETTINGS = {}
@@ -31,7 +40,7 @@ with open("settings.cfg", "r") as settings_file: #this builds the SETTINGS varia
                 if isinstance(SETTINGS[key], list): SETTINGS[key].append(value)
                 else: SETTINGS[key] = [SETTINGS[key], value]
             else: SETTINGS[key] = [value]  # Always store values as a list
-    print(f'DEBUG SETTINGS BEGIN: {SETTINGS}') if SETTINGS["debug"][0] == "True" else None
+    logging.debug(f'DEBUG SETTINGS BEGIN: {SETTINGS}') if SETTINGS["debug"][0] == "True" else None
     for guild_id in SETTINGS["servers"]:
         MY_GUILD.append(discord.Object(id=guild_id))
         
@@ -97,13 +106,13 @@ class MyClient(discord.Client):
                 user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
                 request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
                 request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
-                print(f'DEBUG WORD PAYLOAD BEGIN: {json.dumps(request, indent=1)}') if SETTINGS["debug"][0] == "True" else None
+                logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {json.dumps(request, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                 async with aiohttp.ClientSession() as session: #make the api request
                     async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                         if response.status == 200:
                             #async with message.channel.typing():
                                 result = await response.json()
-                                print(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
+                                logging.debug(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                                 last_visible_index = len(result["results"][0]["history"]["visible"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
                                 processedreply = result["results"][0]["history"]["visible"][last_visible_index][1] #load said reply
                                 new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
@@ -111,14 +120,15 @@ class MyClient(discord.Client):
                                 user_interaction_history.append(new_entry) #update user history
                                 if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
                                     user_interaction_history.pop(0)
-            print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') #print to console for logging
+            logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') 
                 
     async def generate_image(self, payload): #image generation api call
-            print(f'DEBUG IMAGE PAYLOAD BEGIN: {payload}') if SETTINGS["debug"][0] == "True" else None
+            logging.debug(f'DEBUG IMAGE PAYLOAD BEGIN: {payload}') if SETTINGS["debug"][0] == "True" else None
             async with aiohttp.ClientSession() as session:
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/txt2img', json=payload) as response:
                     if response.status == 200:
                         data = await response.json()
+                        logging.debug(f'DEBUG IMAGE RESPONSE BEGIN: {response}') if SETTINGS["debug"][0] == "True" else None
                         if "images" in data: #Tile and compile images into grid.
                             image_list = []
                             for i in data['images']:
@@ -137,6 +147,15 @@ class MyClient(discord.Client):
                                 composite_image.paste(image, (col * width, row * height))
                             composite_image_bytes = io.BytesIO() # Convert the composite image to bytes and encode to base64
                             composite_image.save(composite_image_bytes, format='PNG') #this turns the bytes into png
+                            if SETTINGS["saveimages"][0] == "True":
+                                current_datetime = datetime.now()
+                                current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S")
+                                pattern = r'[\/:*?"<>|]'
+                                sanitized_prompt = re.sub(pattern, '', payload["prompt"])
+                                imagesavepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}.png'
+                                with open(imagesavepath, "wb") as output_file:
+                                    output_file.write(composite_image_bytes.getvalue())
+                                
                             composite_image_base64 = base64.b64encode(composite_image_bytes.getvalue()).decode() #this makes it base64 
                             png_payload = {"image": "data:image/png;base64," + composite_image_base64} #prepare image for posting to discord
                             composite_image_bytes.seek(0) #go to the beginning of your bytes
@@ -191,7 +210,7 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
         await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
         composite_image_bytes = await client.generate_image(self.payload) #generate image and place it into composite_image_bytes
         await interaction.followup.send(content=f"Reroll", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
+        logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
     
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -202,14 +221,14 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
                     image_bytes = await response.read()
                     dm_channel = await interaction.user.create_dm()
                     await dm_channel.send(file=discord.File(io.BytesIO(image_bytes), filename='composite_image.png'))
-                    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | DM Image | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.message.attachments[0].url}') 
+                    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | DM Image | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.message.attachments[0].url}') 
                 else: await interaction.response.send_message("Failed to fetch the image.")
     
     @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
     async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.userid == interaction.user.id:
             await interaction.message.delete()
-            print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Delete   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.id}')
+            logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Delete   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.id}')
 
 class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing modal.
     def __init__(self, payload, *args, **kwargs):
@@ -224,14 +243,14 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
         for neg in negative_values: # Remove negative values from userprompt if they match
             newprompt = newprompt.replace(neg, '')
         self.payload["prompt"] = newprompt
-        print(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
+        logging.debug(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
         composite_image_bytes = await client.generate_image(self.payload) #make the api call to generate the new image
         await interaction.followup.send(content=f'Edit: New prompt `{newprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-        print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
+        logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
      
 @client.event
 async def on_ready():
-    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
+    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
 
 @client.tree.command() #Begins imagen slash command stuff 
 @app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps", userlora="Pick a LORA", userwidth="Image width", userheight="Image height")
@@ -287,7 +306,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
             async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
                     response_data = await response.json()
-                    print(f'USERMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
+                    logging.debug(f'USERMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
         else: usermodel = None
     else:
         for default_model in SETTINGS["defaultmodel"]: #This loads the server specific default model if it exists
@@ -297,7 +316,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
                     async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
                         response_data = await response.json()
-                        print(f'DEFAULTMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
+                        logging.debug(f'DEFAULTMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
@@ -316,6 +335,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         view = Imagegenbuttons(payload, interaction.user.id)
         await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else: await interaction.followup.send("API failed")
-    print(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel}') #Print request to console
+    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel}') 
 
 client.run(SETTINGS["token"][0]) #run bot.
