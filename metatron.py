@@ -306,14 +306,25 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                     logging.debug(f'USERMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
         else: usermodel = None
     else:
+        model_payload = None
         for default_model in SETTINGS["defaultmodel"]: #This loads the server specific default model if it exists
-            default_model_values = default_model.split(",")
-            if str(interaction.guild.id) == default_model_values[0]:
-                model_payload = {"sd_model_checkpoint": default_model_values[1]}
-                async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
-                    async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
-                        response_data = await response.json()
-                        logging.debug(f'DEFAULTMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
+            #checkid, default_model_values = default_model.split(',', 2)
+            checkid, defaultmodelname, defaultmodelprompt, defaultmodelneg = default_model.strip().split("|", 3)  #grab the second and third values and put them into variables
+            if str(interaction.channel.id) == checkid:
+                model_payload = {"sd_model_checkpoint": defaultmodelname}
+                payload["prompt"] = f"{defaultmodelprompt},{payload['prompt']}"
+                payload["negative_prompt"] = f"{defaultmodelneg},{payload['negative_prompt']}"
+                break
+            elif str(interaction.guild.id) == checkid:
+                model_payload = {"sd_model_checkpoint": defaultmodelname}
+                payload["prompt"] = f"{defaultmodelprompt},{payload['prompt']}"
+                payload["negative_prompt"] = f"{defaultmodelneg},{payload['negative_prompt']}"
+        if model_payload:
+            async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
+                async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
+                    response_data = await response.json()
+                    logging.debug(f'DEFAULTMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
+    
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()

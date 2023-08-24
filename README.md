@@ -67,7 +67,7 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 | wordsettings | Default payload it sends to the Ooba API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
 | debug | Turns on debug information. | `debug=True` |
 | ignorefields | This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like but itll be ignored and the defaults used. | `ignorefields=userbatch,userwidth,userheight` |
-| defaultmodel | This lets you set a default model per server. It is the server id(same as the one you use for *servers*)then a comma, then the exact model name(same as you use for *models* but without the \| and things after) You can have one of these for each server. | `defaultmodel=345664623455,Goobs-v34.ckpt [a67efe20]`
+| defaultmodel | This lets you set a default model per server or channel. Channel default will take precedence over server default. The defaults here will be combined with the global models= defaults. It is the server or channel id then a \| then the exact model name, another \| followed by a positive prompt, and then another \| followed by a negative prompt (same as you use for *models*) You can have one of these for each server or channel. | `defaultmodel=345664623455|Goobs-v34.ckpt [a67efe20]|goobs are good|no bad goobs`
 | enableimage | If set to anything besides True, image generation will be disabled. | `enableimage=True` |
 | enableword | If set to anything besides True, LLM generation will be disabled. | `enableword=True` |
 | enableurls | If set to anything besides True, URL and Image parsing for the LLM will be disabled. | `enableurls=True` |
