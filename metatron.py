@@ -293,6 +293,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
         if "userlora" not in ignore_fields:
             pattern = r"value='(.*?)'" #regex to strip unneed chars
             matches = re.findall(pattern, str(userlora))
+            currentlora = matches[0]
             payload["prompt"] = f"<lora:{matches[0]}:1>,{payload['prompt']}"
         else: userlora = None
     if usermodel is not None: #Check the user models choice if present
@@ -341,8 +342,8 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     composite_image_bytes = await client.generate_image(payload) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
         view = Imagegenbuttons(payload, interaction.user.id)
-        await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
+        await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Lora: `{currentlora}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else: await interaction.followup.send("API failed")
-    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel}') 
+    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel} L={currentlora}') 
 
 client.run(SETTINGS["token"][0]) #run bot.
