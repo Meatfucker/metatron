@@ -19,6 +19,8 @@ from sumy.nlp.stemmers import Stemmer
 from sumy.utils import get_stop_words
 import logging
 import sys
+import random
+import os
 logging.getLogger('PIL').setLevel(logging.WARNING) #This fixes a bug in PIL thatll fill the logging full of trash otherwise
 logging.basicConfig(filename='bot.log', level=logging.DEBUG, format='%(message)s') #log to this file.
 console_handler = logging.StreamHandler(sys.stdout) 
@@ -182,7 +184,7 @@ class MyClient(discord.Client):
             summarizer = Summarizer(stemmer)
             summarizer.stop_words = get_stop_words("english") #sumy summarizer setup stuff
             compileddescription = ""
-            for sentence in summarizer(parser.document, 2):
+            for sentence in summarizer(parser.document, 4):
                 compileddescription = (f' {compileddescription} {sentence}')
             sitedescription = (f'The URL is a website about the following:{compileddescription}')
             return sitedescription
@@ -346,4 +348,16 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     else: await interaction.followup.send("API failed")
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel} L={currentlora}') 
 
+@client.tree.command()
+async def speakgen(interaction: discord.Interaction, userprompt: str):
+    await interaction.response.defer()
+    async with aiohttp.ClientSession() as session: 
+        params = {'inputstring': userprompt}
+        async with session.get(f'{SETTINGS["speakapi"][0]}/txt2wav', params=params) as response: 
+            response_data = await response.read()
+            
+            if response_data:
+                wav_bytes_io = io.BytesIO(response_data)
+                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{userprompt}.wav"))
+                logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}') 
 client.run(SETTINGS["token"][0]) #run bot.

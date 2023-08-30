@@ -1,11 +1,13 @@
 # metatron
-A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, and a stable diffusion generation command via the AUTOMATIC1111 API.
+A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, a stable diffusion generation command via the AUTOMATIC1111 API, and a text to speech command via a Bark API located at https://github.com/Meatfucker/bark-apiserver.
 
-I wanted a bot to provide LLM and Image gen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
+I wanted a bot to provide LLM, imagegen, and audiogen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
 
 To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 11 question/answer pairs for each user, which is lost on each restart. It can also see the contents of links and links to images. 
 
 Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the settings.cfg file. Any negatives in it are applied to all gens and also stripped from prompts, useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, a edit button to edit the current prompt, and a delete button which can only be used by the person who made the gen.
+
+Audio generation is handled via the /speakgen command.
 
 
 ## INSTALLATION INSTRUCTIONS
@@ -60,6 +62,7 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 |----|----|----|
 | wordapi | Address and port of your ooba API endpoint | `wordapi=http://localhost:5000` |
 | imageapi | Address and port of your A1111 API endpoint | `imageapi=http://localhost:7860` |
+| speakapi | Address and port of your Bark API endpoint | `imageapi=http://localhost:8086` |
 | models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1.safetensors [a532e5bb]\|positive prompt here\|negative prompt here` |
 | servers | Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server. | `servers=34534523663` |
 | token | Bots Discord token. | `token=90A8DF0G8907ASD7F097ADFQ98WE7` |
