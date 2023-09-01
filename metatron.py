@@ -297,7 +297,9 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
             matches = re.findall(pattern, str(userlora))
             currentlora = matches[0]
             payload["prompt"] = f"<lora:{matches[0]}:1>,{payload['prompt']}"
-        else: userlora = None
+        else: 
+            userlora = None
+            currentlora = None
     if usermodel is not None: #Check the user models choice if present
         if "usermodel" not in ignore_fields:  
             pattern = r"value='(.*?)'" #regex to strip unneed chars
