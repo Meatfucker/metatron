@@ -154,7 +154,9 @@ class MyClient(discord.Client):
                                 current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S") #This removes chars that cant be filenames
                                 pattern = r'[\/:*?"<>|]'
                                 sanitized_prompt = re.sub(pattern, '', payload["prompt"]) #this removes chars that cant be filenames
-                                imagesavepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}.png'
+                                basepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}'
+                                truncatedpath = basepath[:200]
+                                imagesavepath = f'{truncatedpath}.png'
                                 with open(imagesavepath, "wb") as output_file:
                                     output_file.write(composite_image_bytes.getvalue()) #saves the gen to disk
                             composite_image_bytes.seek(0) #go to the beginning of your bytes
