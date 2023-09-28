@@ -194,6 +194,46 @@ class MyClient(discord.Client):
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
 
+class Speakgenbuttons(discord.ui.View):
+
+    def __init__(self, params, user_id, userprompt, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.params = params
+            self.userid = user_id
+            self.userprompt = userprompt
+            self.timeout = None
+            
+    @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
+    async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f'{SETTINGS["speakapi"][0]}/txt2wav', params=self.params) as response: 
+                response_data = await response.read()
+                if response_data:
+                    wav_bytes_io = io.BytesIO(response_data)
+                    truncatedfilename = self.userprompt[:1000]
+                    await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedfilename}.wav"), view=Speakgenbuttons(self.params, interaction.user.id, self.userprompt))
+                    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.userprompt}') 
+    
+    @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
+    async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer() #ensure we dont get the interaction failed message if it takes too long to respond
+        async with aiohttp.ClientSession() as session:
+            async with session.get(interaction.message.attachments[0].url) as response:
+                if response.status == 200:
+                    sound_bytes = await response.read()
+                    dm_channel = await interaction.user.create_dm()
+                    truncatedfilename = self.userprompt[:1000]
+                    await dm_channel.send(file=discord.File(io.BytesIO(sound_bytes), filename=f'{truncatedfilename}.wav'))
+                    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | DM Speak | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.message.attachments[0].url}') 
+                else: await interaction.response.send_message("Failed to fetch the speak.")
+    
+    @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
+    async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.userid == interaction.user.id:
+            await interaction.message.delete()
+            logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Delete   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | {interaction.id}')
+
 class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image gens
     
     def __init__(self, payload, user_id, *args, **kwargs):
@@ -361,8 +401,9 @@ async def speakgen(interaction: discord.Interaction, userprompt: str):
             response_data = await response.read()
             
             if response_data:
+                view = Speakgenbuttons(params, interaction.user.id, userprompt)
                 wav_bytes_io = io.BytesIO(response_data)
                 truncatedfilename = userprompt[:1000]
-                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedfilename}.wav"))
+                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedfilename}.wav"), view=Speakgenbuttons(params, interaction.user.id, userprompt))
                 logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}') 
 client.run(SETTINGS["token"][0]) #run bot.
