@@ -362,6 +362,7 @@ async def speakgen(interaction: discord.Interaction, userprompt: str):
             
             if response_data:
                 wav_bytes_io = io.BytesIO(response_data)
-                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{userprompt}.wav"))
+                truncatedfilename = userprompt[:1000]
+                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedfilename}.wav"))
                 logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}') 
 client.run(SETTINGS["token"][0]) #run bot.
