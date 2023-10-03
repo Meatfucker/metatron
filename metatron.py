@@ -21,6 +21,7 @@ import logging
 import sys
 import random
 import os
+
 logging.getLogger('PIL').setLevel(logging.WARNING) #This fixes a bug in PIL thatll fill the logging full of trash otherwise
 logging.basicConfig(filename='bot.log', level=logging.DEBUG, format='%(message)s') #log to this file.
 console_handler = logging.StreamHandler(sys.stdout) 
@@ -55,10 +56,12 @@ class MyClient(discord.Client):
         self.user_interaction_history = {} #Set up user LLM history variable.
         self.models = []
         self.loras = []
+        self.voices = []
             
     async def setup_hook(self): #Sync slash commands with discord servers Im on.
         await client.load_models()
         await client.load_loras()
+        await client.load_voices()
         for guild_obj in MY_GUILD:
             self.tree.copy_global_to(guild=guild_obj)
             await self.tree.sync(guild=guild_obj)
@@ -78,6 +81,16 @@ class MyClient(discord.Client):
                 for name in response_data:
                     self.loras.append(app_commands.Choice(name=name["name"], value=name["name"]))
         return self.loras
+    
+    async def load_voices(self): #Get list of voices for user interface
+        async with aiohttp.ClientSession() as session: 
+            async with session.get(f'{SETTINGS["speakapi"][0]}/voices') as response:
+                response_data = await response.json()
+                voices_list = response_data.get('voices', [])
+                for voice in voices_list:
+                    self.voices.append(app_commands.Choice(name=voice, value=voice))
+        return self.voices
+        
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
@@ -194,7 +207,7 @@ class MyClient(discord.Client):
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
 
-class Speakgenbuttons(discord.ui.View):
+class Speakgenbuttons(discord.ui.View): #Class for the ui buttons on speakgen
 
     def __init__(self, params, user_id, userprompt, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -371,7 +384,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
                     response_data = await response.json()
                     logging.debug(f'DEFAULTMODEL DEBUG RESPONSE: {response_data}') if SETTINGS["debug"][0] == "True" else None
-    
     async with aiohttp.ClientSession() as session: #Check what the currently loaded model is, and then load the appropriate default prompt and negatives.
         async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=payload) as response: #Api request to get the current model.
             response_data = await response.json()
@@ -393,17 +405,24 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel} L={currentlora}') 
 
 @client.tree.command()
-async def speakgen(interaction: discord.Interaction, userprompt: str):
+@app_commands.choices(uservoice=client.voices)
+async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice: Optional[app_commands.Choice[str]] = None):
     await interaction.response.defer()
     async with aiohttp.ClientSession() as session: 
-        params = {'inputstring': userprompt}
+        if uservoice is not None:
+                pattern = r"value='(.*?)'" #regex to strip unneed chars
+                matches = re.findall(pattern, str(uservoice))
+                currentvoice = matches[0]
+                params = {'inputstring': userprompt, 'voicefile': currentvoice}
+        else: 
+            params = {'inputstring': userprompt}
         async with session.get(f'{SETTINGS["speakapi"][0]}/txt2wav', params=params) as response: 
             response_data = await response.read()
-            
             if response_data:
                 view = Speakgenbuttons(params, interaction.user.id, userprompt)
                 wav_bytes_io = io.BytesIO(response_data)
                 truncatedfilename = userprompt[:1000]
                 await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedfilename}.wav"), view=Speakgenbuttons(params, interaction.user.id, userprompt))
                 logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}') 
+
 client.run(SETTINGS["token"][0]) #run bot.
