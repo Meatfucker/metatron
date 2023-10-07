@@ -32,6 +32,7 @@ logging.getLogger().addHandler(console_handler)
 
 MY_GUILD = []
 SETTINGS = {}
+concurrent_requests_per_user = {}
 
 with open("settings.cfg", "r") as settings_file: #this builds the SETTINGS variable.
     for line in settings_file:
@@ -90,7 +91,6 @@ class MyClient(discord.Client):
                 for voice in voices_list:
                     self.voices.append(app_commands.Choice(name=voice, value=voice))
         return self.voices
-        
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
@@ -137,44 +137,52 @@ class MyClient(discord.Client):
                                     user_interaction_history.pop(0)
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') 
                 
-    async def generate_image(self, payload): #image generation api call
-            logging.debug(f'DEBUG IMAGE PAYLOAD BEGIN: {payload}') if SETTINGS["debug"][0] == "True" else None
-            async with aiohttp.ClientSession() as session:
-                async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/txt2img', json=payload) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        logging.debug(f'DEBUG IMAGE RESPONSE BEGIN: {response}') if SETTINGS["debug"][0] == "True" else None
-                        if "images" in data: #Tile and compile images into grid.
-                            image_list = []
-                            for i in data['images']:
-                                image_bytes = io.BytesIO(base64.b64decode(i.split(",", 1)[0])) #decode base64 into images
-                                image = Image.open(image_bytes)
-                                image_list.append(image)
-                            width, height = image_list[0].size
-                            num_images_per_row = math.ceil(math.sqrt(len(image_list))) #math stuff I googled, fuck if I know, it works.
-                            num_rows = math.ceil(len(image_list) / num_images_per_row) #figure out how many rows
-                            composite_width = num_images_per_row * width #find exact width of final image
-                            composite_height = num_rows * height #find exact height of final image
-                            composite_image = Image.new('RGB', (composite_width, composite_height)) #make blank canvas the side of our grid
-                            for idx, image in enumerate(image_list): #place images in grid
-                                row = idx // num_images_per_row
-                                col = idx % num_images_per_row
-                                composite_image.paste(image, (col * width, row * height))
-                            composite_image_bytes = io.BytesIO() # load the composite image from bytes
-                            composite_image.save(composite_image_bytes, format='PNG') #this turns the bytes into png
-                            if SETTINGS["saveimages"][0] == "True": 
-                                current_datetime = datetime.now()
-                                current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S") #This removes chars that cant be filenames
-                                pattern = r'[\/:*?"<>|]'
-                                sanitized_prompt = re.sub(pattern, '', payload["prompt"]) #this removes chars that cant be filenames
-                                basepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}'
-                                truncatedpath = basepath[:200]
-                                imagesavepath = f'{truncatedpath}.png'
-                                with open(imagesavepath, "wb") as output_file:
-                                    output_file.write(composite_image_bytes.getvalue()) #saves the gen to disk
-                            composite_image_bytes.seek(0) #go to the beginning of your bytes
-                            return composite_image_bytes
-                    else: return None
+    async def generate_image(self, payload, user_id): #image generation api call
+            if user_id in concurrent_requests_per_user and concurrent_requests_per_user[user_id] >= int(SETTINGS["maxrequests"][0]):
+                return None  # User has reached the limit, do not allow another request
+            concurrent_requests_per_user[user_id] = concurrent_requests_per_user.get(user_id, 0) + 1    
+            try:
+                logging.debug(f'DEBUG IMAGE PAYLOAD BEGIN: {payload}') if SETTINGS["debug"][0] == "True" else None
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/txt2img', json=payload) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            logging.debug(f'DEBUG IMAGE RESPONSE BEGIN: {response}') if SETTINGS["debug"][0] == "True" else None
+                            if "images" in data: #Tile and compile images into grid.
+                                image_list = []
+                                for i in data['images']:
+                                    image_bytes = io.BytesIO(base64.b64decode(i.split(",", 1)[0])) #decode base64 into images
+                                    image = Image.open(image_bytes)
+                                    image_list.append(image)
+                                width, height = image_list[0].size
+                                num_images_per_row = math.ceil(math.sqrt(len(image_list))) #math stuff I googled, fuck if I know, it works.
+                                num_rows = math.ceil(len(image_list) / num_images_per_row) #figure out how many rows
+                                composite_width = num_images_per_row * width #find exact width of final image
+                                composite_height = num_rows * height #find exact height of final image
+                                composite_image = Image.new('RGB', (composite_width, composite_height)) #make blank canvas the side of our grid
+                                for idx, image in enumerate(image_list): #place images in grid
+                                    row = idx // num_images_per_row
+                                    col = idx % num_images_per_row
+                                    composite_image.paste(image, (col * width, row * height))
+                                composite_image_bytes = io.BytesIO() # load the composite image from bytes
+                                composite_image.save(composite_image_bytes, format='PNG') #this turns the bytes into png
+                                if SETTINGS["saveimages"][0] == "True": 
+                                    current_datetime = datetime.now()
+                                    current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S") #This removes chars that cant be filenames
+                                    pattern = r'[\/:*?"<>|]'
+                                    sanitized_prompt = re.sub(pattern, '', payload["prompt"]) #this removes chars that cant be filenames
+                                    basepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}'
+                                    truncatedpath = basepath[:200]
+                                    imagesavepath = f'{truncatedpath}.png'
+                                    with open(imagesavepath, "wb") as output_file:
+                                        output_file.write(composite_image_bytes.getvalue()) #saves the gen to disk
+                                composite_image_bytes.seek(0) #go to the beginning of your bytes
+                        else: return None
+            finally:
+                # Decrement the count of concurrent requests for the user
+                if user_id in concurrent_requests_per_user:
+                    concurrent_requests_per_user[user_id] -= 1
+            return composite_image_bytes
                    
     async def extract_text_from_url(self, url): #This function takes a url and returns a description of either the webpage or the picture.
         response = requests.head(url)
@@ -262,10 +270,13 @@ class Imagegenbuttons(discord.ui.View): #class for the ui buttons on the image g
     @discord.ui.button(label='Reroll', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
-        composite_image_bytes = await client.generate_image(self.payload) #generate image and place it into composite_image_bytes
-        await interaction.followup.send(content=f"Reroll", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-        logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
-    
+        composite_image_bytes = await client.generate_image(self.payload, interaction.user.id) #generate image and place it into composite_image_bytes
+        if composite_image_bytes is not None:
+            await interaction.followup.send(content=f"Reroll", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
+            logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Reroll   | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
+        else:
+            await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
+            
     @discord.ui.button(label='Mail', emoji="✉", style=discord.ButtonStyle.grey)
     async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer() #ensure we dont get the interaction failed message if it takes too long to respond
@@ -298,10 +309,13 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
             newprompt = newprompt.replace(neg, '')
         self.payload["prompt"] = newprompt
         logging.debug(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
-        composite_image_bytes = await client.generate_image(self.payload) #make the api call to generate the new image
-        await interaction.followup.send(content=f'Edit: New prompt `{newprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-        logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
-     
+        composite_image_bytes = await client.generate_image(self.payload, interaction.user.id) #make the api call to generate the new image
+        if composite_image_bytes is not None:
+            await interaction.followup.send(content=f'Edit: New prompt `{newprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
+            logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
+        else:
+            await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
+            
 @client.event
 async def on_ready():
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
@@ -397,7 +411,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                     modelnegative = modelnegtemp
             if modelprompt: payload["prompt"] = f"{modelprompt},{payload['prompt']}" #Combine the model defaults with the user choices and update payload
             if modelnegative: payload["negative_prompt"] = f"{modelnegative},{payload['negative_prompt']}"
-    composite_image_bytes = await client.generate_image(payload) #generate image and place it into composite_image_bytes
+    composite_image_bytes = await client.generate_image(payload, interaction.user.id) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
         view = Imagegenbuttons(payload, interaction.user.id)
         await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Lora: `{currentlora}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
