@@ -313,7 +313,8 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
         logging.debug(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
         composite_image_bytes = await client.generate_image(self.payload, interaction.user.id) #make the api call to generate the new image
         if composite_image_bytes is not None:
-            await interaction.followup.send(content=f'Edit: New prompt `{newprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
+            truncatedprompt = newprompt[:1500]
+            await interaction.followup.send(content=f'Edit: New prompt `{truncatedprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
         else:
             await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
@@ -416,7 +417,8 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     composite_image_bytes = await client.generate_image(payload, interaction.user.id) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
         view = Imagegenbuttons(payload, interaction.user.id)
-        await interaction.followup.send(content=f"Prompt: **`{userprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Lora: `{currentlora}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
+        truncatedprompt = userprompt[:1500]
+        await interaction.followup.send(content=f"Prompt: **`{truncatedprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Lora: `{currentlora}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else: await interaction.followup.send("API failed")
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel} L={currentlora}') 
 
@@ -437,8 +439,8 @@ async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice:
             if response_data:
                 view = Speakgenbuttons(params, interaction.user.id, userprompt)
                 wav_bytes_io = io.BytesIO(response_data)
-                truncatedfilename = userprompt[:1000]
-                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedfilename}.wav"), view=Speakgenbuttons(params, interaction.user.id, userprompt))
+                truncatedprompt = userprompt[:1000]
+                await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedprompt}.wav"), view=Speakgenbuttons(params, interaction.user.id, userprompt))
                 logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}') 
 
 client.run(SETTINGS["token"][0]) #run bot.
