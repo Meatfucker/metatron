@@ -186,6 +186,8 @@ class MyClient(discord.Client):
                    
     async def extract_text_from_url(self, url): #This function takes a url and returns a description of either the webpage or the picture.
         response = requests.head(url)
+        if response.status_code == 404:
+            return "The website returned a 404"
         if 'image' in response.headers.get('content-type'):
             image_response = requests.get(url)
             if image_response.status_code == 200:
