@@ -68,29 +68,33 @@ class MyClient(discord.Client):
             await self.tree.sync(guild=guild_obj)
     
     async def load_models(self): #Get list of models for user interface
-        async with aiohttp.ClientSession() as session: 
-            async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/sd-models') as response:
-                response_data = await response.json()
-                for title in response_data:
-                    self.models.append(app_commands.Choice(name=title["title"], value=title["title"]))
-        return self.models
+        if SETTINGS["enableimage"][0] == "True":
+            async with aiohttp.ClientSession() as session: 
+                async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/sd-models') as response:
+                    response_data = await response.json()
+                    for title in response_data:
+                        self.models.append(app_commands.Choice(name=title["title"], value=title["title"]))
+            return self.models
+        
         
     async def load_loras(self): #Get list of loras for user interface
-        async with aiohttp.ClientSession() as session: 
-            async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/loras') as response:
-                response_data = await response.json()
-                for name in response_data:
-                    self.loras.append(app_commands.Choice(name=name["name"], value=name["name"]))
-        return self.loras
+        if SETTINGS["enableimage"][0] == "True":
+            async with aiohttp.ClientSession() as session: 
+                async with session.get(f'{SETTINGS["imageapi"][0]}/sdapi/v1/loras') as response:
+                    response_data = await response.json()
+                    for name in response_data:
+                        self.loras.append(app_commands.Choice(name=name["name"], value=name["name"]))
+            return self.loras
     
     async def load_voices(self): #Get list of voices for user interface
-        async with aiohttp.ClientSession() as session: 
-            async with session.get(f'{SETTINGS["speakapi"][0]}/voices') as response:
-                response_data = await response.json()
-                voices_list = response_data.get('voices', [])
-                for voice in voices_list:
-                    self.voices.append(app_commands.Choice(name=voice, value=voice))
-        return self.voices
+        if SETTINGS["enablespeak"][0] == "True":
+            async with aiohttp.ClientSession() as session: 
+                async with session.get(f'{SETTINGS["speakapi"][0]}/voices') as response:
+                    response_data = await response.json()
+                    voices_list = response_data.get('voices', [])
+                    for voice in voices_list:
+                        self.voices.append(app_commands.Choice(name=voice, value=voice))
+            return self.voices
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
@@ -128,8 +132,7 @@ class MyClient(discord.Client):
                             #async with message.channel.typing():
                                 result = await response.json()
                                 logging.debug(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
-                                last_visible_index = len(result["results"][0]["history"]["internal"]) - 1 #find how long the history is and get the place of the last message in it, which is our reply
-                                processedreply = result["results"][0]["history"]["internal"][last_visible_index][1] #load said reply
+                                processedreply = result["results"][0]["history"]["internal"][-1][1] #load said reply
                                 new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
                                 await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
                                 user_interaction_history.append(new_entry) #update user history
@@ -186,8 +189,6 @@ class MyClient(discord.Client):
                    
     async def extract_text_from_url(self, url): #This function takes a url and returns a description of either the webpage or the picture.
         response = requests.head(url)
-        if response.status_code == 404:
-            return "The website returned a 404"
         if 'image' in response.headers.get('content-type'):
             image_response = requests.get(url)
             if image_response.status_code == 200:
@@ -203,6 +204,8 @@ class MyClient(discord.Client):
                             cleaneddescription = data["caption"].split(",")[0].strip()
                             photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
                             return photodescription
+            else:
+                return "There was an error with the link"
         else:
             parser = HtmlParser.from_url(url, Tokenizer("english")) 
             stemmer = Stemmer("english")
@@ -425,6 +428,9 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
 @client.tree.command()
 @app_commands.choices(uservoice=client.voices)
 async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice: Optional[app_commands.Choice[str]] = None):
+    if SETTINGS["enablespeak"][0] != "True":
+            await interaction.response.send_message("Voice generation is currently disabled.")
+            return
     await interaction.response.defer()
     async with aiohttp.ClientSession() as session: 
         if uservoice is not None:

@@ -74,6 +74,7 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 | enableimage | If set to anything besides True, image generation will be disabled. | `enableimage=True` |
 | enableword | If set to anything besides True, LLM generation will be disabled. | `enableword=True` |
 | enableurls | If set to anything besides True, URL and Image parsing for the LLM will be disabled. | `enableurls=True` |
+| enablespeak | If set to anything besides True, Voice generation will be disabled | `enablespeak=True` |
 | maxbatch | The maximum batch size the bot can gen. | `maxbatch=4` |
 | maxwidth | The maximum horizontal resolution the bot can gen. | `maxwidth=512` |
 | maxheight | The maximum vertical resolution the bot can gen. | `maxheight=512` |
