@@ -98,51 +98,39 @@ class MyClient(discord.Client):
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
-        banned_users = SETTINGS["bannedusers"][0].split(',')
-        if str(message.author.id) in banned_users:
-            return  # Exit the function if the author is banned
+        if str(message.author.id) in SETTINGS.get("bannedusers", [""])[0].split(','): return  # Exit the function if the author is banned
         if not self.user_interaction_history.get(message.author.id): self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
         if self.user.mentioned_in(message):
-            if SETTINGS["enableword"][0] != "True":
-                await message.channel.send("LLM generation is currently disabled.")
-                return
-            async with message.channel.typing():
-                if "request" not in locals(): #sets up a default payload if one doesnt already exist
-                    request = self.defaultword_payload
-                taggedmessage = re.sub(r'<[^>]+>', '', message.content) #strips The discord name from the users prompt.
-                taggedmessage = taggedmessage.lstrip() #strip leading whitespace.
-                url_pattern = r'(https?://[^\s]+)'
-                urls = re.findall(url_pattern, taggedmessage) #check messages for urls.
+            if SETTINGS.get("enableword", ["False"])[0] != "True": await message.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
+            async with message.channel.typing(): #Put the "typing...." discord status up
+                request = request if "request" in locals() else self.defaultword_payload #set up default payload request if it doesnt exist
+                taggedmessage = re.sub(r'<[^>]+>', '', message.content).lstrip() #strips The discord name from the users prompt.
                 if SETTINGS["enableurls"][0] == "True":
+                    urls = re.findall(r'(https?://[^\s]+)', taggedmessage)  # Check messages for URLs.
                     for url in urls:
                         extracted_text = await self.extract_text_from_url(url)
                         taggedmessage = (f'{taggedmessage}. {extracted_text}')
-                    if message.attachments:
-                        url = message.attachments[0].url
-                        extracted_text = await self.extract_text_from_url(url)
-                        taggedmessage = (f'{taggedmessage}. {extracted_text}')
+                    for attachment in message.attachments:
+                        extracted_text = await self.extract_text_from_url(attachment.url)
+                        taggedmessage = f'{taggedmessage}. {extracted_text}'
                 request["user_input"] = taggedmessage #load the user prompt into the api payload
                 user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
-                request["history"]["internal"] = user_interaction_history #Load the unique history into api payload
-                request["history"]["visible"] = user_interaction_history #Load the unique history into api payload
+                request["history"]["internal"] = request["history"]["visible"] = user_interaction_history #Load user interaction history into payload
                 logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {json.dumps(request, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                 async with aiohttp.ClientSession() as session: #make the api request
                     async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
                         if response.status == 200:
-                            #async with message.channel.typing():
                                 result = await response.json()
                                 logging.debug(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                                 processedreply = result["results"][0]["history"]["internal"][-1][1] #load said reply
                                 new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
                                 await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
                                 user_interaction_history.append(new_entry) #update user history
-                                if len(user_interaction_history) > 10: #if history is at max size, dump oldest result
-                                    user_interaction_history.pop(0)
+                                if len(user_interaction_history) > 10: user_interaction_history.pop(0) #remove oldest result in history once maximum is reached
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') 
                 
     async def generate_image(self, payload, user_id): #image generation api call
-            if user_id in concurrent_requests_per_user and concurrent_requests_per_user[user_id] >= int(SETTINGS["maxrequests"][0]):
-                return None  # User has reached the limit, do not allow another request
+            if user_id in concurrent_requests_per_user and concurrent_requests_per_user[user_id] >= int(SETTINGS["maxrequests"][0]): return None  # User has reached the limit, do not allow another request
             concurrent_requests_per_user[user_id] = concurrent_requests_per_user.get(user_id, 0) + 1    
             try:
                 logging.debug(f'DEBUG IMAGE PAYLOAD BEGIN: {payload}') if SETTINGS["debug"][0] == "True" else None
@@ -151,40 +139,31 @@ class MyClient(discord.Client):
                         if response.status == 200:
                             data = await response.json()
                             logging.debug(f'DEBUG IMAGE RESPONSE BEGIN: {response}') if SETTINGS["debug"][0] == "True" else None
-                            if "images" in data: #Tile and compile images into grid.
-                                image_list = []
-                                for i in data['images']:
-                                    image_bytes = io.BytesIO(base64.b64decode(i.split(",", 1)[0])) #decode base64 into images
-                                    image = Image.open(image_bytes)
-                                    image_list.append(image)
+                            if "images" in data: # Tile and compile images into a grid
+                                image_list = [Image.open(io.BytesIO(base64.b64decode(i.split(",", 1)[0])) ) for i in data['images']]
                                 width, height = image_list[0].size
-                                num_images_per_row = math.ceil(math.sqrt(len(image_list))) #math stuff I googled, fuck if I know, it works.
-                                num_rows = math.ceil(len(image_list) / num_images_per_row) #figure out how many rows
-                                composite_width = num_images_per_row * width #find exact width of final image
-                                composite_height = num_rows * height #find exact height of final image
-                                composite_image = Image.new('RGB', (composite_width, composite_height)) #make blank canvas the side of our grid
-                                for idx, image in enumerate(image_list): #place images in grid
-                                    row = idx // num_images_per_row
-                                    col = idx % num_images_per_row
+                                num_images_per_row = math.ceil(math.sqrt(len(image_list)))
+                                num_rows = math.ceil(len(image_list) / num_images_per_row)
+                                composite_width = num_images_per_row * width
+                                composite_height = num_rows * height
+                                composite_image = Image.new('RGB', (composite_width, composite_height))
+                                for idx, image in enumerate(image_list):
+                                    row, col = divmod(idx, num_images_per_row)
                                     composite_image.paste(image, (col * width, row * height))
-                                composite_image_bytes = io.BytesIO() # load the composite image from bytes
-                                composite_image.save(composite_image_bytes, format='PNG') #this turns the bytes into png
+                                composite_image_bytes = io.BytesIO()
+                                composite_image.save(composite_image_bytes, format='PNG')
                                 if SETTINGS["saveimages"][0] == "True": 
-                                    current_datetime = datetime.now()
-                                    current_datetime_str = current_datetime.strftime("%Y-%m-%d_%H-%M-%S") #This removes chars that cant be filenames
-                                    pattern = r'[\/:*?"<>|]'
-                                    sanitized_prompt = re.sub(pattern, '', payload["prompt"]) #this removes chars that cant be filenames
+                                    current_datetime_str = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                                    sanitized_prompt = re.sub(r'[\/:*?"<>|]', '', payload["prompt"])
                                     basepath = f'{SETTINGS["savepath"][0]}/{current_datetime_str}-{sanitized_prompt}'
                                     truncatedpath = basepath[:200]
                                     imagesavepath = f'{truncatedpath}.png'
                                     with open(imagesavepath, "wb") as output_file:
-                                        output_file.write(composite_image_bytes.getvalue()) #saves the gen to disk
-                                composite_image_bytes.seek(0) #go to the beginning of your bytes
+                                        output_file.write(composite_image_bytes.getvalue())
+                                composite_image_bytes.seek(0)
                         else: return None
-            finally:
-                # Decrement the count of concurrent requests for the user
-                if user_id in concurrent_requests_per_user:
-                    concurrent_requests_per_user[user_id] -= 1
+            finally: # Decrement the count of concurrent requests for the user
+                if user_id in concurrent_requests_per_user: concurrent_requests_per_user[user_id] -= 1
             return composite_image_bytes
                    
     async def extract_text_from_url(self, url): #This function takes a url and returns a description of either the webpage or the picture.
@@ -192,11 +171,8 @@ class MyClient(discord.Client):
         if 'image' in response.headers.get('content-type'):
             image_response = requests.get(url)
             if image_response.status_code == 200:
-                image = Image.open(io.BytesIO(image_response.content)) # Convert the image to PNG
-                png_image = io.BytesIO()
-                image.save(png_image, format='PNG')
-                png_image_base64 = base64.b64encode(png_image.getvalue()).decode('utf-8') # Convert the image to base64
-                png_payload = {"image": "data:image/png;base64," + png_image_base64}
+                image = Image.open(io.BytesIO(image_response.content))
+                png_payload = {"image": "data:image/png;base64," + base64.b64encode(io.BytesIO(image_response.content).read()).decode('utf-8')}
                 async with aiohttp.ClientSession() as session: #make the BLIP interrogate API call
                     async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
                         if response.status == 200:
@@ -204,8 +180,7 @@ class MyClient(discord.Client):
                             cleaneddescription = data["caption"].split(",")[0].strip()
                             photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
                             return photodescription
-            else:
-                return "There was an error with the link"
+            else: return "There was an error with the link"
         else:
             parser = HtmlParser.from_url(url, Tokenizer("english")) 
             stemmer = Stemmer("english")
@@ -306,6 +281,7 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
         self.payload = payload
         self.timeout = None
         self.add_item(discord.ui.TextInput(label="Prompt", default=self.payload["prompt"], required=True, style=discord.TextStyle.long))
+    
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         newprompt = str(self.children[0])
@@ -319,13 +295,11 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
             truncatedprompt = newprompt[:1500]
             await interaction.followup.send(content=f'Edit: New prompt `{truncatedprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
-        else:
-            await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
+        else: await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
             
 @client.event
 async def on_ready():
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
-
 @client.tree.command() #Begins imagen slash command stuff 
 @app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps", userlora="Pick a LORA", userwidth="Image width", userheight="Image height")
 @app_commands.choices(usermodel=client.models)  # Use the loaded models as choices
@@ -335,8 +309,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
             await interaction.response.send_message("Image generation is currently disabled.")
             return
     banned_users = SETTINGS["bannedusers"][0].split(',')
-    if str(interaction.user.id) in banned_users:
-            return  # Exit the function if the author is banned
+    if str(interaction.user.id) in banned_users: return  # Exit the function if the author is banned
     await interaction.response.defer() #respond so discord doesnt get mad it takes a long time to actually respond to the message
     payload = client.defaultimage_payload.copy() #set up default payload 
     negative_values = [neg.strip() for neg in payload["negative_prompt"].split(",")] # Split negative values into a list
@@ -368,17 +341,14 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 payload["height"] = userheight
     if userlora is not None:
         if "userlora" not in ignore_fields:
-            pattern = r"value='(.*?)'" #regex to strip unneed chars
-            matches = re.findall(pattern, str(userlora))
+            matches = re.findall(r"value='(.*?)'", str(userlora))
             currentlora = matches[0]
             payload["prompt"] = f"<lora:{matches[0]}:1>,{payload['prompt']}"
-        else: 
-            userlora = None
+        else: userlora = None
     else: currentlora = None
     if usermodel is not None: #Check the user models choice if present
         if "usermodel" not in ignore_fields:  
-            pattern = r"value='(.*?)'" #regex to strip unneed chars
-            matches = re.findall(pattern, str(usermodel)) #convert the data to string and then run the regex on it
+            matches = re.findall(r"value='(.*?)'", str(usermodel))
             model_payload = {"sd_model_checkpoint": matches[0]} #put model choice into payload
             async with aiohttp.ClientSession() as session: #make the api request to change to the requested model
                 async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/options', json=model_payload) as response:
@@ -438,8 +408,7 @@ async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice:
                 matches = re.findall(pattern, str(uservoice))
                 currentvoice = matches[0]
                 params = {'inputstring': userprompt, 'voicefile': currentvoice}
-        else: 
-            params = {'inputstring': userprompt}
+        else: params = {'inputstring': userprompt}
         async with session.get(f'{SETTINGS["speakapi"][0]}/txt2wav', params=params) as response: 
             response_data = await response.read()
             if response_data:
