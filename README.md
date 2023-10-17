@@ -82,3 +82,4 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 | saveimages | If set to True, will save generated images | `saveimages=True` |
 | savepath | The path where you want the images saved | `savepath=outputs` |
 | maxrequests | The number of concurrent requests per user | `maxrequests=1` |
+| multimodal | Enable for Llava multimodal support | `multimodal=True` |
