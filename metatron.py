@@ -175,6 +175,7 @@ class MyClient(discord.Client):
             if image_response.status_code == 200:
                 image = Image.open(io.BytesIO(image_response.content))
                 if SETTINGS["multimodal"][0] == "True":
+                    image = image.convert('RGB')
                     jpg_buffer = io.BytesIO()
                     image.save(jpg_buffer, format='JPEG')
                     jpg_base64 = base64.b64encode(jpg_buffer.getvalue()).decode('utf-8')
