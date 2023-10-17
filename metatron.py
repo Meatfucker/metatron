@@ -105,15 +105,17 @@ class MyClient(discord.Client):
             async with message.channel.typing(): #Put the "typing...." discord status up
                 request = request if "request" in locals() else self.defaultword_payload #set up default payload request if it doesnt exist
                 taggedmessage = re.sub(r'<[^>]+>', '', message.content).lstrip() #strips The discord name from the users prompt.
+                processedmessage = taggedmessage
                 if SETTINGS["enableurls"][0] == "True":
-                    urls = re.findall(r'(https?://[^\s]+)', taggedmessage)  # Check messages for URLs.
+                    urls = re.findall(r'(https?://[^\s]+)', processedmessage)  # Check messages for URLs.
                     for url in urls:
                         extracted_text = await self.extract_text_from_url(url)
-                        taggedmessage = (f'{taggedmessage}. {extracted_text}')
+                        processedmessage = (f'{processedmessage}. {extracted_text}')
                     for attachment in message.attachments:
                         extracted_text = await self.extract_text_from_url(attachment.url)
-                        taggedmessage = f'{taggedmessage}. {extracted_text}'
-                request["user_input"] = taggedmessage #load the user prompt into the api payload
+                        processedmessage = f'{processedmessage}. {extracted_text}'
+                    request["user_input"] = processedmessage #load the user prompt into the api payload
+                else: request["user_input"] = taggedmessage #load the user prompt into the api payload
                 user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
                 request["history"]["internal"] = request["history"]["visible"] = user_interaction_history #Load user interaction history into payload
                 logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {json.dumps(request, indent=1)}') if SETTINGS["debug"][0] == "True" else None
@@ -172,14 +174,22 @@ class MyClient(discord.Client):
             image_response = requests.get(url)
             if image_response.status_code == 200:
                 image = Image.open(io.BytesIO(image_response.content))
-                png_payload = {"image": "data:image/png;base64," + base64.b64encode(io.BytesIO(image_response.content).read()).decode('utf-8')}
-                async with aiohttp.ClientSession() as session: #make the BLIP interrogate API call
-                    async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            cleaneddescription = data["caption"].split(",")[0].strip()
-                            photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
-                            return photodescription
+                if SETTINGS["multimodal"][0] == "True":
+                    jpg_buffer = io.BytesIO()
+                    image.save(jpg_buffer, format='JPEG')
+                    jpg_base64 = base64.b64encode(jpg_buffer.getvalue()).decode('utf-8')
+                    jpg_payload = f"data:image/jpeg;base64,{jpg_base64}"
+                    photodescription = f'\n<img src="{jpg_payload}">'
+                    return photodescription
+                else:
+                    png_payload = {"image": "data:image/png;base64," + base64.b64encode(io.BytesIO(image_response.content).read()).decode('utf-8')}
+                    async with aiohttp.ClientSession() as session: #make the BLIP interrogate API call
+                        async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                cleaneddescription = data["caption"].split(",")[0].strip()
+                                photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
+                                return photodescription
             else: return "There was an error with the link"
         else:
             parser = HtmlParser.from_url(url, Tokenizer("english")) 
