@@ -170,28 +170,29 @@ class MyClient(discord.Client):
                    
     async def extract_text_from_url(self, url): #This function takes a url and returns a description of either the webpage or the picture.
         response = requests.head(url)
-        if 'image' in response.headers.get('content-type'):
-            image_response = requests.get(url)
-            if image_response.status_code == 200:
-                image = Image.open(io.BytesIO(image_response.content))
-                if SETTINGS["multimodal"][0] == "True":
-                    image = image.convert('RGB')
-                    jpg_buffer = io.BytesIO()
-                    image.save(jpg_buffer, format='JPEG')
-                    jpg_base64 = base64.b64encode(jpg_buffer.getvalue()).decode('utf-8')
-                    jpg_payload = f"data:image/jpeg;base64,{jpg_base64}"
-                    photodescription = f'\n<img src="{jpg_payload}">'
-                    return photodescription
-                else:
-                    png_payload = {"image": "data:image/png;base64," + base64.b64encode(io.BytesIO(image_response.content).read()).decode('utf-8')}
-                    async with aiohttp.ClientSession() as session: #make the BLIP interrogate API call
-                        async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                cleaneddescription = data["caption"].split(",")[0].strip()
-                                photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
-                                return photodescription
-            else: return "There was an error with the link"
+        if 'content-type' in response.headers:
+            if 'image' in response.headers.get('content-type'):
+                image_response = requests.get(url)
+                if image_response.status_code == 200:
+                    image = Image.open(io.BytesIO(image_response.content))
+                    if SETTINGS["multimodal"][0] == "True":
+                        image = image.convert('RGB')
+                        jpg_buffer = io.BytesIO()
+                        image.save(jpg_buffer, format='JPEG')
+                        jpg_base64 = base64.b64encode(jpg_buffer.getvalue()).decode('utf-8')
+                        jpg_payload = f"data:image/jpeg;base64,{jpg_base64}"
+                        photodescription = f'\n<img src="{jpg_payload}">'
+                        return photodescription
+                    else:
+                        png_payload = {"image": "data:image/png;base64," + base64.b64encode(io.BytesIO(image_response.content).read()).decode('utf-8')}
+                        async with aiohttp.ClientSession() as session: #make the BLIP interrogate API call
+                            async with session.post(f'{SETTINGS["imageapi"][0]}/sdapi/v1/interrogate', json=png_payload) as response:
+                                if response.status == 200:
+                                    data = await response.json()
+                                    cleaneddescription = data["caption"].split(",")[0].strip()
+                                    photodescription = (f'The URL is a picture of the following topics: {cleaneddescription}')
+                                    return photodescription
+                else: return "There was an error with the link"
         else:
             parser = HtmlParser.from_url(url, Tokenizer("english")) 
             stemmer = Stemmer("english")
