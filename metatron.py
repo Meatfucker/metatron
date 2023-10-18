@@ -203,7 +203,13 @@ class MyClient(discord.Client):
                 compileddescription = (f' {compileddescription} {sentence}')
             sitedescription = (f'The URL is a website about the following:{compileddescription}')
             return sitedescription
- 
+            
+    async def moderate_prompt(self, prompt):
+        negative_values = [neg.strip() for neg in self.defaultimage_payload["negative_prompt"].split(",")] # Split negative values into a list
+        for neg in negative_values:
+            prompt = re.sub(r'\b' + re.escape(neg) + r'\b', '', prompt)
+        return prompt
+
 intents = discord.Intents.all() #discord intents
 client = MyClient(intents=intents) #client intents
 
@@ -297,14 +303,12 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         newprompt = str(self.children[0])
-        negative_values = [neg.strip() for neg in self.payload["negative_prompt"].split(",")] # Split negative values into a list
-        for neg in negative_values: # Remove negative values from userprompt if they match
-            newprompt = newprompt.replace(neg, '')
-        self.payload["prompt"] = newprompt
+        moderatedprompt = await client.moderate_prompt(newprompt)
+        self.payload["prompt"] = moderatedprompt.strip()
         logging.debug(f'DEBUG EDIT PAYLOAD BEGIN: {self.payload}') if SETTINGS["debug"][0] == "True" else None
         composite_image_bytes = await client.generate_image(self.payload, interaction.user.id) #make the api call to generate the new image
         if composite_image_bytes is not None:
-            truncatedprompt = newprompt[:1500]
+            truncatedprompt = moderatedprompt[:1500]
             await interaction.followup.send(content=f'Edit: New prompt `{truncatedprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
         else: await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
@@ -324,11 +328,9 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     if str(interaction.user.id) in banned_users: return  # Exit the function if the author is banned
     await interaction.response.defer() #respond so discord doesnt get mad it takes a long time to actually respond to the message
     payload = client.defaultimage_payload.copy() #set up default payload 
-    negative_values = [neg.strip() for neg in payload["negative_prompt"].split(",")] # Split negative values into a list
     ignore_fields = [field.strip() for field in SETTINGS["ignorefields"][0].split(",")]  # Split ignored fields into a list
-    for neg in negative_values: # Remove negative values from userprompt if they match
-        userprompt = userprompt.replace(neg, '')
-    payload["prompt"] = userprompt.strip() #put the prompt into the payload
+    moderatedprompt = await client.moderate_prompt(userprompt)
+    payload["prompt"] = moderatedprompt.strip() #put the prompt into the payload
     if usernegative is not None:
         if "usernegative" not in ignore_fields: payload["negative_prompt"] = f"{usernegative},{payload['negative_prompt']}" 
         else: usernegative = None #These checks allow us to ignore fields if we wish.
@@ -370,7 +372,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     else:
         model_payload = None
         for default_model in SETTINGS["defaultmodel"]: #This loads the server specific default model if it exists
-            #checkid, default_model_values = default_model.split(',', 2)
             checkid, defaultmodelname, defaultmodelprompt, defaultmodelneg = default_model.strip().split("|", 3)  #grab the second and third values and put them into variables
             if str(interaction.channel.id) == checkid:
                 model_payload = {"sd_model_checkpoint": defaultmodelname}
@@ -402,7 +403,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
     composite_image_bytes = await client.generate_image(payload, interaction.user.id) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
         view = Imagegenbuttons(payload, interaction.user.id)
-        truncatedprompt = userprompt[:1500]
+        truncatedprompt = moderatedprompt[:1500]
         await interaction.followup.send(content=f"Prompt: **`{truncatedprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Lora: `{currentlora}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else: await interaction.followup.send("API failed")
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imagegen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={payload["prompt"]}, N={usernegative}, M={currentmodel} L={currentlora}') 
