@@ -100,12 +100,18 @@ class MyClient(discord.Client):
         if message.author == self.user: return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
         if str(message.author.id) in SETTINGS.get("bannedusers", [""])[0].split(','): return  # Exit the function if the author is banned
         if not self.user_interaction_history.get(message.author.id): self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
+        user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
         if self.user.mentioned_in(message):
             if SETTINGS.get("enableword", ["False"])[0] != "True": await message.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
             async with message.channel.typing(): #Put the "typing...." discord status up
                 request = request if "request" in locals() else self.defaultword_payload #set up default payload request if it doesnt exist
+                request["history"]["internal"] = request["history"]["visible"] = user_interaction_history #Load user interaction history into payload
                 taggedmessage = re.sub(r'<[^>]+>', '', message.content).lstrip() #strips The discord name from the users prompt.
                 processedmessage = taggedmessage
+                if processedmessage == "forget":
+                    self.user_interaction_history[message.author.id] = []
+                    await message.channel.send("History wiped")
+                    return
                 if SETTINGS["enableurls"][0] == "True":
                     urls = re.findall(r'(https?://[^\s]+)', processedmessage)  # Check messages for URLs.
                     for url in urls:
@@ -116,8 +122,6 @@ class MyClient(discord.Client):
                         processedmessage = f'{processedmessage}. {extracted_text}'
                     request["user_input"] = processedmessage #load the user prompt into the api payload
                 else: request["user_input"] = taggedmessage #load the user prompt into the api payload
-                user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
-                request["history"]["internal"] = request["history"]["visible"] = user_interaction_history #Load user interaction history into payload
                 logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {json.dumps(request, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                 async with aiohttp.ClientSession() as session: #make the api request
                     async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
@@ -126,9 +130,9 @@ class MyClient(discord.Client):
                                 logging.debug(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {json.dumps(result, indent=1)}') if SETTINGS["debug"][0] == "True" else None
                                 processedreply = result["results"][0]["history"]["internal"][-1][1] #load said reply
                                 new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
-                                await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
                                 user_interaction_history.append(new_entry) #update user history
                                 if len(user_interaction_history) > 10: user_interaction_history.pop(0) #remove oldest result in history once maximum is reached
+                                await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel                                
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | wordgen  | {message.author.name}:{message.author.id} | {message.guild}:{message.channel} | {taggedmessage}') 
                 
     async def generate_image(self, payload, user_id): #image generation api call
@@ -180,8 +184,7 @@ class MyClient(discord.Client):
                         jpg_buffer = io.BytesIO()
                         image.save(jpg_buffer, format='JPEG')
                         jpg_base64 = base64.b64encode(jpg_buffer.getvalue()).decode('utf-8')
-                        jpg_payload = f"data:image/jpeg;base64,{jpg_base64}"
-                        photodescription = f'\n<img src="{jpg_payload}">'
+                        photodescription = f'\n<img src="data:image/jpeg;base64,{jpg_base64}">'
                         return photodescription
                     else:
                         png_payload = {"image": "data:image/png;base64," + base64.b64encode(io.BytesIO(image_response.content).read()).decode('utf-8')}
