@@ -3,11 +3,13 @@ A discord.py based machine learning bot. It provides a LLM chatbot via the oobab
 
 I wanted a bot to provide LLM, imagegen, and audiogen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
 
-To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 11 question/answer pairs for each user, which is lost on each restart. It can also see the contents of links and links to images. 
+To chat with the bot just tag it or reply to something it says. It keeps a separate chat history of 11 question/answer pairs for each user, which is lost on each restart or can be manually cleared by a user by telling the bot "forget". It can also see the contents of links and links to images. 
 
 Image generation is handled via the /imagegen command. It provides very basic image functionality. Mandatory negatives are handled via the settings.cfg file. Any negatives in it are applied to all gens and also stripped from prompts, useful for banning unwanted keywords. It also has a reroll button, to make a new gen with the same settings and a new seed, a DM button to dm a gen to yourself, a edit button to edit the current prompt, and a delete button which can only be used by the person who made the gen.
 
 Audio generation is handled via the /speakgen command.
+
+Llava multimodal model support.
 
 
 ## INSTALLATION INSTRUCTIONS
