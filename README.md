@@ -11,6 +11,8 @@ Audio generation is handled via the /speakgen command.
 
 Llava multimodal model support.
 
+/impersonate command allowing for easy one-shot or few-shot prompting of the llm.
+
 
 ## INSTALLATION INSTRUCTIONS
 

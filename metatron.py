@@ -434,4 +434,14 @@ async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice:
                 await interaction.followup.send(file=discord.File(wav_bytes_io, filename=f"{truncatedprompt}.wav"), view=Speakgenbuttons(params, interaction.user.id, userprompt))
                 logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | speakgen | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt}') 
 
+@client.tree.command()
+async def impersonate(interaction: discord.Interaction, userprompt: str, llmprompt: str):
+    if SETTINGS.get("enableword", ["False"])[0] != "True": await interaction.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
+    if str(interaction.user.id) in SETTINGS.get("bannedusers", [""])[0].split(','): return  # Exit the function if the author is banned
+    if not client.user_interaction_history.get(interaction.user.id): client.user_interaction_history[interaction.user.id] = [] #Creates a blank interaction history if it doesnt already exist.
+    new_entry = [userprompt, llmprompt] #prepare entry to be placed into the users history
+    client.user_interaction_history[interaction.user.id].append(new_entry) #update user history
+    if len(client.user_interaction_history[interaction.user.id]) > 10: client.user_interaction_history[interaction.user.id].pop(0) #remove oldest result in history once maximum is reached
+    await interaction.response.send_message(f'History inserted:\n User: {userprompt}\n LLM: {llmprompt}')
+    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imperson | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt},{llmprompt}')
 client.run(SETTINGS["token"][0]) #run bot.
