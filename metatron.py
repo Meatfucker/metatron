@@ -399,7 +399,6 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
             if modelnegative: payload["negative_prompt"] = f"{modelnegative},{payload['negative_prompt']}"
     composite_image_bytes = await client.generate_image(payload, interaction.user.id) #generate image and place it into composite_image_bytes
     if composite_image_bytes is not None:
-        view = Imagegenbuttons(payload, interaction.user.id)
         truncatedprompt = moderatedprompt[:1500]
         await interaction.followup.send(content=f"Prompt: **`{truncatedprompt}`**, Negatives: `{usernegative}` Model: `{currentmodel}` Lora: `{currentlora}` Seed `{userseed}` Batch Size `{userbatch}` Steps `{usersteps}`", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(payload, interaction.user.id)) #Send message to discord with the image and request parameters
     else: await interaction.followup.send("API failed")
