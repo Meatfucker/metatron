@@ -59,6 +59,9 @@ class MyClient(discord.Client):
         await client.load_loras()
         await client.load_voices()
         await self.tree.sync()
+        
+    async def on_ready(self):
+        logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
     
     async def load_models(self): #Get list of models for user interface
         if SETTINGS["enableimage"][0] == "True":
@@ -308,10 +311,6 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
             await interaction.followup.send(content=f'Edit: New prompt `{truncatedprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
             logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Edit     | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={self.payload["prompt"]}')
         else: await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
-            
-@client.event
-async def on_ready():
-    logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
 
 @client.tree.command() #Begins imagen slash command stuff 
 @app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps", userlora="Pick a LORA", userwidth="Image width", userheight="Image height")
