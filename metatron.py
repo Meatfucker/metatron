@@ -21,12 +21,13 @@ import logging
 import sys
 import random
 import os
+import colorlog
 
 logging.getLogger('PIL').setLevel(logging.WARNING) #This fixes a bug in PIL thatll fill the logging full of trash otherwise
 logging.basicConfig(filename='bot.log', level=logging.DEBUG, format='%(message)s') #log to this file.
 console_handler = logging.StreamHandler(sys.stdout) 
 console_handler.setLevel(logging.DEBUG)
-console_formatter = logging.Formatter('%(message)s')
+console_formatter = colorlog.ColoredFormatter("%(log_color)s%(message)s", log_colors={'DEBUG': 'cyan', 'INFO': 'green', 'WARNING': 'yellow', 'ERROR': 'red', 'CRITICAL': 'red,bg_white'})
 console_handler.setFormatter(console_formatter)
 logging.getLogger().addHandler(console_handler)
 
