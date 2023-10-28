@@ -64,12 +64,11 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 
 | OPTION | DESCRIPTION | EXAMPLE |
 |----|----|----|
+| token | Bots Discord token. | `token=90A8DF0G8907ASD7F097ADFQ98WE7` |
 | wordapi | Address and port of your ooba API endpoint | `wordapi=http://localhost:5000` |
 | imageapi | Address and port of your A1111 API endpoint | `imageapi=http://localhost:7860` |
 | speakapi | Address and port of your Bark API endpoint | `imageapi=http://localhost:8086` |
 | models | Default model positive and negatives. Can have one of these lines for each model. Is the model name and hash then \| followed by a mandatory positive prompt for that model(useful for loading loras). Then another \| followed by a mandatory negative prompt. | `models=Binglerv5-1.safetensors [a532e5bb]\|positive prompt here\|negative prompt here` |
-| servers | Discord server id of the servers youll want the imagegen command to work on. Youll want one of these lines for each server. | `servers=34534523663` |
-| token | Bots Discord token. | `token=90A8DF0G8907ASD7F097ADFQ98WE7` |
 | imagesettings | Default payload it sends to the A1111 API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
 | wordsettings | Default payload it sends to the Ooba API. Any value accepted by the API can be placed here but if you mess up the structure itll definitely crash. | See settings-example.cfg |
 | debug | Turns on debug information. | `debug=True` |

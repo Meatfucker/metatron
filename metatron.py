@@ -30,24 +30,19 @@ console_formatter = logging.Formatter('%(message)s')
 console_handler.setFormatter(console_formatter)
 logging.getLogger().addHandler(console_handler)
 
-MY_GUILD = []
 SETTINGS = {}
 concurrent_requests_per_user = {}
 
 with open("settings.cfg", "r") as settings_file: #this builds the SETTINGS variable.
     for line in settings_file:
         if "=" in line:
-            key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip()
+            key, value = (line.split("=", 1)[0].strip(), line.split("=", 1)[1].strip())
             if key in SETTINGS:             # Check if the key already exists in SETTINGS
                 if isinstance(SETTINGS[key], list): SETTINGS[key].append(value)
                 else: SETTINGS[key] = [SETTINGS[key], value]
             else: SETTINGS[key] = [value]  # Always store values as a list
     logging.debug(f'DEBUG SETTINGS BEGIN: {SETTINGS}') if SETTINGS["debug"][0] == "True" else None
-    for guild_id in SETTINGS["servers"]:
-        MY_GUILD.append(discord.Object(id=guild_id))
-        
+          
 class MyClient(discord.Client):
     def __init__(self, *, intents: discord.Intents):
         super().__init__(intents=intents)
@@ -63,9 +58,7 @@ class MyClient(discord.Client):
         await client.load_models()
         await client.load_loras()
         await client.load_voices()
-        for guild_obj in MY_GUILD:
-            self.tree.copy_global_to(guild=guild_obj)
-            await self.tree.sync(guild=guild_obj)
+        await self.tree.sync()
     
     async def load_models(self): #Get list of models for user interface
         if SETTINGS["enableimage"][0] == "True":
@@ -75,8 +68,7 @@ class MyClient(discord.Client):
                     for title in response_data:
                         self.models.append(app_commands.Choice(name=title["title"], value=title["title"]))
             return self.models
-        
-        
+           
     async def load_loras(self): #Get list of loras for user interface
         if SETTINGS["enableimage"][0] == "True":
             async with aiohttp.ClientSession() as session: 
@@ -320,6 +312,7 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'): #prompt editing mo
 @client.event
 async def on_ready():
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | Logged in as {client.user} (ID: {client.user.id})') #Tell console login was successful
+
 @client.tree.command() #Begins imagen slash command stuff 
 @app_commands.describe(usermodel="Choose the model", userprompt="Describe what you want to gen", userbatch="Batch Size", usernegative="Enter things you dont want in the gen", userseed="Seed", usersteps="Number of steps", userlora="Pick a LORA", userwidth="Image width", userheight="Image height")
 @app_commands.choices(usermodel=client.models)  # Use the loaded models as choices
