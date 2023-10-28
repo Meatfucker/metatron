@@ -94,6 +94,7 @@ class MyClient(discord.Client):
                     voices_list = response_data.get('voices', [])
                     for voice in voices_list:
                         self.voices.append(app_commands.Choice(name=voice, value=voice))
+                    self.voices.append(app_commands.Choice(name="Base voice", value="None"))
             return self.voices
     
     async def on_message(self, message): #Function that watches if bot is tagged and if it is makes a request to ooba and posts response
@@ -102,7 +103,7 @@ class MyClient(discord.Client):
         if not self.user_interaction_history.get(message.author.id): self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
         user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
         if self.user.mentioned_in(message):
-            if SETTINGS.get("enableword", ["False"])[0] != "True": await message.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
+            if SETTINGS["enableword"][0] != "True": await message.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
             async with message.channel.typing(): #Put the "typing...." discord status up
                 request = request if "request" in locals() else self.defaultword_payload #set up default payload request if it doesnt exist
                 request["history"]["internal"] = request["history"]["visible"] = user_interaction_history #Load user interaction history into payload
@@ -414,17 +415,20 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
 @client.tree.command()
 @app_commands.choices(uservoice=client.voices)
 async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice: Optional[app_commands.Choice[str]] = None):
-    if SETTINGS["enablespeak"][0] != "True":
-            await interaction.response.send_message("Voice generation is currently disabled.")
-            return
+    if SETTINGS["enablespeak"][0] != "True": await interaction.response.send_message("Voice generation is currently disabled."); return
     await interaction.response.defer()
-    async with aiohttp.ClientSession() as session: 
+    async with aiohttp.ClientSession() as session:
         if uservoice is not None:
-                pattern = r"value='(.*?)'" #regex to strip unneed chars
-                matches = re.findall(pattern, str(uservoice))
+                matches = re.findall(r"value='(.*?)'", str(uservoice))
                 currentvoice = matches[0]
-                params = {'inputstring': userprompt, 'voicefile': currentvoice}
-        else: params = {'inputstring': userprompt}
+                if currentvoice == "None": params = {'inputstring': userprompt}
+                else: params = {'inputstring': userprompt, 'voicefile': currentvoice}
+        else: 
+            for default_voice in SETTINGS["defaultvoice"]: #This loads the server specific default model if it exists
+                checkid, defaultvoicename = default_voice.strip().split("|", 1)  #grab the values and put them into variables
+                if str(interaction.channel.id) == checkid: params = {'inputstring': userprompt, 'voicefile': defaultvoicename}
+                elif str(interaction.guild.id) == checkid: params = {'inputstring': userprompt, 'voicefile': defaultvoicename}
+                else: params = {'inputstring': userprompt}
         async with session.get(f'{SETTINGS["speakapi"][0]}/txt2wav', params=params) as response: 
             response_data = await response.read()
             if response_data:
@@ -436,7 +440,7 @@ async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice:
 
 @client.tree.command()
 async def impersonate(interaction: discord.Interaction, userprompt: str, llmprompt: str):
-    if SETTINGS.get("enableword", ["False"])[0] != "True": await interaction.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
+    if SETTINGS["enableword"][0] != "True": await interaction.channel.send("LLM generation is currently disabled."); return #check if LLM generation is enabled
     if str(interaction.user.id) in SETTINGS.get("bannedusers", [""])[0].split(','): return  # Exit the function if the author is banned
     if not client.user_interaction_history.get(interaction.user.id): client.user_interaction_history[interaction.user.id] = [] #Creates a blank interaction history if it doesnt already exist.
     new_entry = [userprompt, llmprompt] #prepare entry to be placed into the users history
@@ -444,4 +448,5 @@ async def impersonate(interaction: discord.Interaction, userprompt: str, llmprom
     if len(client.user_interaction_history[interaction.user.id]) > 10: client.user_interaction_history[interaction.user.id].pop(0) #remove oldest result in history once maximum is reached
     await interaction.response.send_message(f'History inserted:\n User: {userprompt}\n LLM: {llmprompt}')
     logging.info(f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | imperson | {interaction.user.name}:{interaction.user.id} | {interaction.guild}:{interaction.channel} | P={userprompt},{llmprompt}')
+
 client.run(SETTINGS["token"][0]) #run bot.

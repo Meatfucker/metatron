@@ -1,5 +1,5 @@
 # metatron
-A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, a stable diffusion generation command via the AUTOMATIC1111 API, and a text to speech command via a Bark API located at https://github.com/Meatfucker/bark-apiserver.
+A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, stable diffusion generation via the AUTOMATIC1111 API, and a text to speech command via a Bark API located at https://github.com/Meatfucker/bark-apiserver.
 
 I wanted a bot to provide LLM, imagegen, and audiogen stuff, but all of the ones out there were quite large and overcomplicated for what I needed. I wrote this in an attempt to provide myself a nice simple base with which to work with. 
 
@@ -32,7 +32,7 @@ Go to the Bot tab on the Developer portal site and enable Privileged Gateway Int
 
 Go to the URL Generator on the OAuth2 tab and select the bot scope. Then select these permissions "Read Messages/View Channels, Send Messages, Manage Messages, Attach Files, Read Message History, Use Slash Commands" then use the link to invite the bot to your server. I may have missed one, if something is missing you can enable it later in server permissions
 
-### Conda Install (OPTIONAL) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.
+### Conda Install (OPTIONAL, Recommended) - This can be skipped if you dont mind if pip installs things globally. This can sometimes cause problems with other ML stuff so I always use conda envs.
 
 Install miniconda if you dont already have conda.
 
@@ -75,6 +75,7 @@ See https://github.com/oobabooga/text-generation-webui/tree/main/api-examples Fo
 | debug | Turns on debug information. | `debug=True` |
 | ignorefields | This is a comma separated list of /imagegen fields you want the user to be unable to change. They will still be able to write whatever they like but itll be ignored and the defaults used. | `ignorefields=userbatch,userwidth,userheight` |
 | defaultmodel | This lets you set a default model per server or channel. Channel default will take precedence over server default. The defaults here will be combined with the global models= defaults. It is the server or channel id then a \| then the exact model name, another \| followed by a positive prompt, and then another \| followed by a negative prompt (same as you use for *models*) You can have one of these for each server or channel. | `defaultmodel=345664623455\|Goobs-v34.ckpt [a67efe20]\|goobs are good\|no bad goobs`
+| defaultvoice | This lets you set a default voice per server or channel. Same as defaultmodel above but for voices and the only field besides the id is the voicefile. | `defaultvoice=23423424324|myvoice.npz` |
 | enableimage | If set to anything besides True, image generation will be disabled. | `enableimage=True` |
 | enableword | If set to anything besides True, LLM generation will be disabled. | `enableword=True` |
 | enableurls | If set to anything besides True, URL and Image parsing for the LLM will be disabled. | `enableurls=True` |
