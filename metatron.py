@@ -421,7 +421,7 @@ async def imagegen(interaction: discord.Interaction, userprompt: str, usernegati
                 payload["prompt"] = f"{defaultmodelprompt},{payload['prompt']}"
                 payload["negative_prompt"] = f"{defaultmodelneg},{payload['negative_prompt']}"
                 break
-            elif str(interaction.guild.id) == checkid:
+            elif str(interaction.guild_id) == checkid:
                 model_payload = {"sd_model_checkpoint": defaultmodelname}
                 payload["prompt"] = f"{defaultmodelprompt},{payload['prompt']}"
                 payload["negative_prompt"] = f"{defaultmodelneg},{payload['negative_prompt']}"
