@@ -40,6 +40,7 @@ logging.getLogger().addHandler(file_handler)
 
 SETTINGS = {}
 concurrent_requests_per_user = {}
+global_interaction_history = {}
 
 with open("settings.cfg", "r", encoding="utf-8") as settings_file: #this builds the SETTINGS variable.
     for line in settings_file:
@@ -60,7 +61,7 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
         self.defaultimage_payload = json.loads(SETTINGS["imagesettings"][0])
         self.defaultword_payload = json.loads(SETTINGS["wordsettings"][0])
-        self.user_interaction_history = {} #Set up user LLM history variable.
+        #self.user_interaction_history = {} #Set up user LLM history variable.
         self.models = []
         self.loras = []
         self.voices = []
@@ -113,20 +114,19 @@ class MyClient(discord.Client):
             return #ignores messages from ourselves for the odd edge case where the bot somehow tags or replies to itself.
         if str(message.author.id) in SETTINGS.get("bannedusers", [""])[0].split(','):
             return  # Exit the function if the author is banned
-        if not self.user_interaction_history.get(message.author.id):
-            self.user_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
-        user_interaction_history = self.user_interaction_history[message.author.id] # Use user-specific interaction history
+        if not global_interaction_history.get(message.author.id):
+            global_interaction_history[message.author.id] = [] #Creates a blank interaction history if it doesnt already exist.
         if self.user.mentioned_in(message):
             if SETTINGS["enableword"][0] != "True":
                 await message.channel.send("LLM generation is currently disabled.")
                 return #check if LLM generation is enabled
             async with message.channel.typing(): #Put the "typing...." discord status up
                 request = request if "request" in locals() else self.defaultword_payload #set up default payload request if it doesnt exist
-                request["history"]["internal"] = request["history"]["visible"] = user_interaction_history #Load user interaction history into payload
+                request["history"]["internal"] = request["history"]["visible"] = global_interaction_history[message.author.id] #Load user interaction history into payload
                 taggedmessage = re.sub(r'<[^>]+>', '', message.content).lstrip() #strips The discord name from the users prompt.
                 processedmessage = taggedmessage
                 if processedmessage == "forget":
-                    self.user_interaction_history[message.author.id] = []
+                    global_interaction_history[message.author.id] = []
                     await message.channel.send("History wiped")
                     logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("forget", "cyan")}   | {colored(message.author.name, "yellow")}:{colored(message.author.id, "light_yellow")} | {colored(message.guild, "red")}:{colored(message.channel, "light_red")}')
                     return
@@ -140,21 +140,26 @@ class MyClient(discord.Client):
                         processedmessage = f'{processedmessage}. {extracted_text}'
                     request["user_input"] = processedmessage #load the user prompt into the api payload
                 else: request["user_input"] = taggedmessage #load the user prompt into the api payload
-                if SETTINGS["debug"][0] == 'True':
-                    logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {colored(json.dumps(request, indent=1), "light_blue")}')
-                async with aiohttp.ClientSession() as session: #make the api request
-                    async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
-                        if response.status == 200:
-                            result = await response.json()
-                            if SETTINGS["debug"][0] == 'True':
-                                logging.debug(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {colored(json.dumps(result, indent=1), "light_blue")}')
-                            processedreply = result["results"][0]["history"]["internal"][-1][1] #load said reply
-                            new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
-                            user_interaction_history.append(new_entry) #update user history
-                            if len(user_interaction_history) > 10:
-                                user_interaction_history.pop(0) #remove oldest result in history once maximum is reached
-                            await message.channel.send(f"{message.author.mention} {processedreply}") #send message to channel
+                processedreply = await client.generate_word(request, message.author.id, taggedmessage)
+                await message.channel.send(f"{message.author.mention} {processedreply}", view=Wordgenbuttons(request, message.author.id, taggedmessage)) #send message to channel
             logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")}  | {colored(message.author.name, "yellow")}:{colored(message.author.id, "light_yellow")} | {colored(message.guild, "red")}:{colored(message.channel, "light_red")} | {colored(taggedmessage, "light_magenta")}')
+
+    async def generate_word(self, request, user_id, taggedmessage):
+        """word generation api call"""
+        if SETTINGS["debug"][0] == 'True':
+            logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {colored(json.dumps(request, indent=1), "light_blue")}')
+        async with aiohttp.ClientSession() as session: #make the api request
+            async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    if SETTINGS["debug"][0] == 'True':
+                        logging.debug(f'DEBUG WORD PAYLOAD RESPONSE BEGIN: {colored(json.dumps(result, indent=1), "light_blue")}')
+                    processedreply = result["results"][0]["history"]["internal"][-1][1] #load said reply
+                    new_entry = [taggedmessage, processedreply] #prepare entry to be placed into the users history
+                    global_interaction_history[user_id].append(new_entry) #update user history
+                    if len(global_interaction_history[user_id]) > 10:
+                        global_interaction_history[user_id].pop(0) #remove oldest result in history once maximum is reached
+        return processedreply
 
     async def generate_image(self, payload, user_id):
         """image generation api call"""
@@ -243,6 +248,66 @@ class MyClient(discord.Client):
 discintents = discord.Intents.all() #discord intents
 client = MyClient(intents=discintents) #client intents
 
+class Wordgenbuttons(discord.ui.View):
+    """Class for the ui buttons on speakgen"""
+
+    def __init__(self, request, user_id, prompt, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.request = request
+        self.userid = user_id
+        self.prompt = prompt
+
+    @discord.ui.button(label='Reroll last reply', emoji="🎲", style=discord.ButtonStyle.grey)
+    async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Rerolls last reply"""
+        if self.userid == interaction.user.id:
+            if len(global_interaction_history[self.userid]) > 0:
+                global_interaction_history[self.userid].pop(len(global_interaction_history[self.userid]) - 1)
+            await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
+            processedreply = await client.generate_word(self.request, interaction.user.id, self.prompt)
+            await interaction.followup.send(f"{interaction.user.mention} {processedreply}", view=Wordgenbuttons(self.request, interaction.user.id, self.prompt)) #send message to channel
+            await interaction.delete_original_response()
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.prompt, "light_magenta")}')
+
+    @discord.ui.button(label='Delete last reply', emoji="❌", style=discord.ButtonStyle.grey)
+    async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Deletes message"""
+        if self.userid == interaction.user.id:
+            global_interaction_history[self.userid].pop(len(global_interaction_history[self.userid]) - 1)
+            await interaction.message.delete()
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("delete", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.id, "light_magenta")}')
+
+    @discord.ui.button(label='Show History', emoji="📜", style=discord.ButtonStyle.grey)
+    async def dmimage(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Prints history to user"""
+        if self.userid == interaction.user.id:
+            await interaction.response.defer() #ensure we dont get the interaction failed message if it takes too long to respond
+            history = io.BytesIO(json.dumps(global_interaction_history[self.userid], indent=1).encode())
+            await interaction.followup.send('**HISTORY:**', ephemeral=True, file=discord.File(history, filename='history.txt'))
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("history", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")}')
+
+    @discord.ui.button(label='Continue', emoji="➕", style=discord.ButtonStyle.grey)
+    async def llmcontinue(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Continues last reply"""
+        if self.userid == interaction.user.id:
+            await interaction.response.defer() #this makes it not say "interaction failed" when things take a long time
+            self.request['_continue'] = True
+            prevresponse = global_interaction_history[self.userid][-1][1]
+            processedreply = await client.generate_word(self.request, interaction.user.id, self.prompt)
+            global_interaction_history[self.userid].pop(len(global_interaction_history[self.userid]) - 2)
+            del self.request['_continue']
+            await interaction.followup.send(f"{interaction.user.mention} {processedreply.replace(prevresponse, '')}", view=Wordgenbuttons(self.request, interaction.user.id, self.prompt)) #send message to channel
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.prompt, "light_magenta")}')
+
+    @discord.ui.button(label='Wipe History', emoji="🤯", style=discord.ButtonStyle.grey)
+    async def delete_history(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Deletes history"""
+        if self.userid == interaction.user.id:
+            global_interaction_history[self.userid] = []
+            await interaction.response.send_message("History wiped", ephemeral=True)
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("forget", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.id, "light_magenta")}')
+
+
 class Speakgenbuttons(discord.ui.View):
     """Class for the ui buttons on speakgen"""
 
@@ -277,7 +342,7 @@ class Speakgenbuttons(discord.ui.View):
                     dm_channel = await interaction.user.create_dm()
                     truncatedfilename = self.userprompt[:1000]
                     await dm_channel.send(file=discord.File(io.BytesIO(sound_bytes), filename=f'{truncatedfilename}.wav'))
-                    logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("DM Speak", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.message.attachments[0].url, "light_magenta")}')
+                    logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("dm speak", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.message.attachments[0].url, "light_magenta")}')
                 else: await interaction.response.send_message("Failed to fetch the speak.")
 
     @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
@@ -285,7 +350,7 @@ class Speakgenbuttons(discord.ui.View):
         """Deletes message"""
         if self.userid == interaction.user.id:
             await interaction.message.delete()
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("Delete", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.id, "light_magenta")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("delete", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.id, "light_magenta")}')
 
 class Imagegenbuttons(discord.ui.View):
     """class for the ui buttons on the image gens"""
@@ -308,7 +373,7 @@ class Imagegenbuttons(discord.ui.View):
         composite_image_bytes = await client.generate_image(self.payload, interaction.user.id) #generate image and place it into composite_image_bytes
         if composite_image_bytes is not None:
             await interaction.followup.send(content="Reroll", file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("Reroll", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.payload["prompt"], "light_magenta")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("reroll", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.payload["prompt"], "light_magenta")}')
         else:
             await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
 
@@ -322,7 +387,7 @@ class Imagegenbuttons(discord.ui.View):
                     image_bytes = await response.read()
                     dm_channel = await interaction.user.create_dm()
                     await dm_channel.send(file=discord.File(io.BytesIO(image_bytes), filename='composite_image.png'))
-                    logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("DM Image", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.message.attachments[0].url, "light_magenta")}')
+                    logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("dm image", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.message.attachments[0].url, "light_magenta")}')
                 else: await interaction.response.send_message("Failed to fetch the image.")
 
     @discord.ui.button(label='Delete', emoji="❌", style=discord.ButtonStyle.grey)
@@ -330,7 +395,7 @@ class Imagegenbuttons(discord.ui.View):
         """Deletes message"""
         if self.userid == interaction.user.id:
             await interaction.message.delete()
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("Delete", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.id, "light_magenta")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("delete", "cyan")}   | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | {colored(interaction.id, "light_magenta")}')
 
 class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'):
     """prompt editing modal."""
@@ -350,7 +415,7 @@ class Editpromptmodal(discord.ui.Modal, title='Edit Prompt'):
         if composite_image_bytes is not None:
             truncatedprompt = moderatedprompt[:1500]
             await interaction.followup.send(content=f'Edit: New prompt `{truncatedprompt}`', file=discord.File(composite_image_bytes, filename='composite_image.png'), view=Imagegenbuttons(self.payload, interaction.user.id))
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("Edit", "cyan")}     | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.payload["prompt"], "light_magenta")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("edit", "cyan")}     | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.payload["prompt"], "light_magenta")}')
         else: await interaction.followup.send(content="Image generation failed.")  # Handle the case when composite_image_bytes is None
 
 @client.tree.command() #Begins imagen slash command stuff
@@ -474,7 +539,7 @@ async def speakgen(interaction: discord.Interaction, userprompt: str, uservoice:
                 checkid, defaultvoicename = default_voice.strip().split("|", 1)  #grab the values and put them into variables
                 if str(interaction.channel.id) == checkid:
                     params = {'inputstring': userprompt, 'voicefile': defaultvoicename}
-                elif str(interaction.guild.id) == checkid:
+                elif str(interaction.guild_id) == checkid:
                     params = {'inputstring': userprompt, 'voicefile': defaultvoicename}
                 else: params = {'inputstring': userprompt}
         async with session.get(f'{SETTINGS["speakapi"][0]}/txt2wav', params=params) as response:
@@ -493,12 +558,12 @@ async def impersonate(interaction: discord.Interaction, userprompt: str, llmprom
         return
     if str(interaction.user.id) in SETTINGS.get("bannedusers", [""])[0].split(','):
         return  # Exit the function if the author is banned
-    if not client.user_interaction_history.get(interaction.user.id):
-        client.user_interaction_history[interaction.user.id] = [] #Creates a blank interaction history if it doesnt already exist.
+    if not global_interaction_history[interaction.user.id]:
+        global_interaction_history[interaction.user.id] = [] #Creates a blank interaction history if it doesnt already exist.
     new_entry = [userprompt, llmprompt] #prepare entry to be placed into the users history
-    client.user_interaction_history[interaction.user.id].append(new_entry) #update user history
-    if len(client.user_interaction_history[interaction.user.id]) > 10:
-        client.user_interaction_history[interaction.user.id].pop(0) #remove oldest result in history once maximum is reached
+    global_interaction_history[interaction.user.id].append(new_entry) #update user history
+    if len(global_interaction_history[interaction.user.id]) > 10:
+        global_interaction_history[interaction.user.id].pop(0) #remove oldest result in history once maximum is reached
     await interaction.response.send_message(f'History inserted:\n User: {userprompt}\n LLM: {llmprompt}')
     logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("imperson", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(userprompt, "light_magenta")},{colored(llmprompt, "light_magenta")}')
 
