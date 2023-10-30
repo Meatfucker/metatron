@@ -256,6 +256,7 @@ class Wordgenbuttons(discord.ui.View):
         self.request = request
         self.userid = user_id
         self.prompt = prompt
+        self.timeout = None
 
     @discord.ui.button(label='Reroll last reply', emoji="🎲", style=discord.ButtonStyle.grey)
     async def reroll(self, interaction: discord.Interaction, button: discord.ui.Button):
