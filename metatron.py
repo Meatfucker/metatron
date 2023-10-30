@@ -268,7 +268,7 @@ class Wordgenbuttons(discord.ui.View):
             processedreply = await client.generate_word(self.request, interaction.user.id, self.prompt)
             await interaction.followup.send(f"{interaction.user.mention} {processedreply}", view=Wordgenbuttons(self.request, interaction.user.id, self.prompt)) #send message to channel
             await interaction.delete_original_response()
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.prompt, "light_magenta")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")}  | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.prompt, "light_magenta")}')
 
     @discord.ui.button(label='Delete last reply', emoji="❌", style=discord.ButtonStyle.grey)
     async def delete_message(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -285,7 +285,7 @@ class Wordgenbuttons(discord.ui.View):
             await interaction.response.defer() #ensure we dont get the interaction failed message if it takes too long to respond
             history = io.BytesIO(json.dumps(global_interaction_history[self.userid], indent=1).encode())
             await interaction.followup.send('**HISTORY:**', ephemeral=True, file=discord.File(history, filename='history.txt'))
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("history", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("history", "cyan")}  | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")}')
 
     @discord.ui.button(label='Continue', emoji="➕", style=discord.ButtonStyle.grey)
     async def llmcontinue(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -298,7 +298,7 @@ class Wordgenbuttons(discord.ui.View):
             global_interaction_history[self.userid].pop(len(global_interaction_history[self.userid]) - 2)
             del self.request['_continue']
             await interaction.followup.send(f"{interaction.user.mention} {processedreply.replace(prevresponse, '')}", view=Wordgenbuttons(self.request, interaction.user.id, self.prompt)) #send message to channel
-            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")} | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.prompt, "light_magenta")}')
+            logging.info(f'{colored(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dark_grey")} | {colored("wordgen", "cyan")}  | {colored(interaction.user.name, "yellow")}:{colored(interaction.user.id, "light_yellow")} | {colored(interaction.guild, "red")}:{colored(interaction.channel, "light_red")} | P={colored(self.prompt, "light_magenta")}')
 
     @discord.ui.button(label='Wipe History', emoji="🤯", style=discord.ButtonStyle.grey)
     async def delete_history(self, interaction: discord.Interaction, button: discord.ui.Button):
