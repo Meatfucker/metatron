@@ -61,7 +61,6 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
         self.defaultimage_payload = json.loads(SETTINGS["imagesettings"][0])
         self.defaultword_payload = json.loads(SETTINGS["wordsettings"][0])
-        #self.user_interaction_history = {} #Set up user LLM history variable.
         self.models = []
         self.loras = []
         self.voices = []
@@ -149,7 +148,7 @@ class MyClient(discord.Client):
         if SETTINGS["debug"][0] == 'True':
             logging.debug(f'DEBUG WORD PAYLOAD BEGIN: {colored(json.dumps(request, indent=1), "light_blue")}')
         async with aiohttp.ClientSession() as session: #make the api request
-            async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request) as response:
+            async with session.post(f'{SETTINGS["wordapi"][0]}/api/v1/chat', json=request, timeout=None) as response:
                 if response.status == 200:
                     result = await response.json()
                     if SETTINGS["debug"][0] == 'True':
