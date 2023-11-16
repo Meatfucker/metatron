@@ -20,6 +20,9 @@ Llava multimodal model support.
 
 A Working A1111 instance with --api enabled.
 
+###---ATTENTION!!!!---
+###Ooba has broken compatibility with its old format in favor of the OPENAI prompt format. Until I can spend the time to do the rework for it, you must make sure to use a version of ooba from before NOV 13th 2023.
+
 A Working oobabooga instance with --api enabled **AND A MODEL ALREADY LOADED**. Loading LLMs is somewhat complex and VERY slow so you must manually load a model via the ooba webui first.
 
 Python
