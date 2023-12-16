@@ -1,3 +1,6 @@
+# ATTENTION - THIS PROJECT HAS BEEN DEPRECATED AND SUPERCEDED BY https://github.com/Meatfucker/metatron2 It will still work if you use the older version of ooba specified below but I highly recommend moving to metatron2.
+
+
 # metatron
 A discord.py based machine learning bot. It provides a LLM chatbot via the oobabooga API, stable diffusion generation via the AUTOMATIC1111 API, and a text to speech command via a Bark API located at https://github.com/Meatfucker/bark-apiserver.
 
